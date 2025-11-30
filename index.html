@@ -772,12 +772,12 @@ function resizeFonts() {
 
   if (base <= 700) {
     // スマホ（縦・横どちらも）用：文字をかなり大きく
-    timeSize  = Math.max(40, base * 0.2);  // 以前は 0.10
+    timeSize  = Math.max(40, base * 0.3);  // 以前は 0.10
     scoreSize = Math.max(32, base * 0.085); // 以前は 0.06
   } else {
     // PC など縦に余裕がある画面
     timeSize  = Math.max(48, base * 0.30);
-    scoreSize = Math.max(36, base * 0.09);
+    scoreSize = Math.max(36, base * 0.15);
   }
 
   document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
@@ -1148,5 +1148,6 @@ function resizeFonts() {
   </script>
 </body>
 </html>
+
 
 
