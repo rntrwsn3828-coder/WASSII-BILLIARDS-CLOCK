@@ -23,20 +23,26 @@
       box-sizing: border-box;
     }
 
-    html, body {
-      height: 100%;
-    }
+html {
+  height: 100%;
+}
 
 body {
   margin: 0;
+  padding: env(safe-area-inset-top)
+           env(safe-area-inset-right)
+           env(safe-area-inset-bottom)
+           env(safe-area-inset-left);  /* ← ここを追加 */
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text-main);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  overflow-y: auto;   /* ここを auto に変更（もしくはこの行自体削除でもOK） */
+  overflow-y: auto;
+  box-sizing: border-box;  /* パディング分で縦がはみ出さないように */
 }
+
 
 
     .app {
@@ -648,5 +654,6 @@ function resizeFonts() {
   </script>
 </body>
 </html>
+
 
 
