@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>WASSII BILLIARDS CLOCK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
   <style>
     :root {
       --bg: #101010;
@@ -24,15 +25,26 @@
     }
 
     body {
-      margin: 0;
-      padding: 4px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
+  margin: 0;
+  padding: 4px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ノッチ付き端末やスマホブラウザで上が隠れないようにする */
+@supports(padding: max(0px)) {
+  body {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    padding-left: max(4px, env(safe-area-inset-left));
+  }
+}
+
 
     .app {
       flex: 1;
@@ -590,3 +602,4 @@
   </script>
 </body>
 </html>
+
