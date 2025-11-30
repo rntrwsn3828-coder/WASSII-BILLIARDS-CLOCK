@@ -39,17 +39,16 @@
                env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     }
 
-.app {
-  min-height: 100vh;
-  width: 100%;          /* 画面幅いっぱい使う */
-  /* max-width: 900px;  ← 削除 */
-  margin: 0;            /* 中央寄せをやめる */
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: radial-gradient(circle at top, #222 0, #000 55%, #000 100%);
-}
+    .app {
+      min-height: 100vh;
+      width: 100%;
+      margin: 0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: radial-gradient(circle at top, #222 0, #000 55%, #000 100%);
+    }
 
     /* header/title/subtitleは使わないがCSSはそのまま残しておく */
     header {
@@ -711,6 +710,48 @@
 
     let audioCtx = null;
 
+    // Wake Lock 用
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+        }
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+        });
+      } catch (e) {
+        console.warn('wakeLock error:', e);
+        wakeLock = null;
+      }
+    }
+
+    async function releaseWakeLock() {
+      try {
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+        }
+      } catch (e) {
+        console.warn('wakeLock release error:', e);
+      }
+    }
+
+    // タブが非表示になったら解除／戻ってきて動作中なら再取得
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (!gameOver && !isPaused && activePlayer !== null) {
+          requestWakeLock();
+        }
+      } else {
+        releaseWakeLock();
+      }
+    });
+
     function ensureAudioCtx() {
       try {
         if (!audioCtx) {
@@ -758,43 +799,41 @@
       playBeep(600, 0.8, 'sawtooth', 0.3); // ここが最後の「ピーーーー」
     }
 
-// ショットクロックモード突入時：ピ・ピ・ピ
-function playOvertimeStartBeep() {
-  if (!soundEnabled) return;
+    // ショットクロックモード突入時：ピ・ピ・ピ
+    function playOvertimeStartBeep() {
+      if (!soundEnabled) return;
 
-  const delays = [0, 150, 300]; // ms単位の遅延時間（0ms, 150ms, 300ms）
+      const delays = [0, 150, 300]; // ms単位の遅延時間（0ms, 150ms, 300ms）
 
-  delays.forEach((d) => {
-    setTimeout(() => {
-      // 短いビープを3回
-      playBeep(900, 0.10, 'square', 0.25);
-    }, d);
-  });
-}
+      delays.forEach((d) => {
+        setTimeout(() => {
+          playBeep(900, 0.10, 'square', 0.25);
+        }, d);
+      });
+    }
 
-function resizeFonts() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const base = Math.min(w, h);  // 画面の短い辺を基準にする
+    function resizeFonts() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const base = Math.min(w, h);  // 画面の短い辺を基準にする
 
-  let timeSize, scoreSize;
-  const labelSize = Math.max(11, base * 0.018);
+      let timeSize, scoreSize;
+      const labelSize = Math.max(11, base * 0.018);
 
-  if (base <= 700) {
-    // スマホ（縦・横どちらも）用：文字をかなり大きく
-    timeSize  = Math.max(40, base * 0.3);  // 以前は 0.10
-    scoreSize = Math.max(32, base * 0.085); // 以前は 0.06
-  } else {
-    // PC など縦に余裕がある画面
-    timeSize  = Math.max(48, base * 0.30);
-    scoreSize = Math.max(36, base * 0.22);
-  }
+      if (base <= 700) {
+        // スマホ用：文字をかなり大きく
+        timeSize  = Math.max(40, base * 0.3);
+        scoreSize = Math.max(32, base * 0.085);
+      } else {
+        // PC など縦に余裕がある画面
+        timeSize  = Math.max(48, base * 0.30);
+        scoreSize = Math.max(36, base * 0.22);
+      }
 
-  document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-  document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-  document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
-}
-
+      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+    }
 
     function formatTime(sec) {
       const s = Math.max(0, sec);
@@ -844,7 +883,6 @@ function resizeFonts() {
       if (shotTime <= 10 && shotTime > 0) {
         playShotWarningBeep();  // ピ・ピ・ピ…
       }
-      // 0秒時の長い「ピーーーー」は playShotEndBeep 側で鳴らす
     }
 
     function clearTimer() {
@@ -857,6 +895,9 @@ function resizeFonts() {
     function startTimerLoop() {
       clearTimer();
       if (!activePlayer || gameOver || isPaused) return;
+
+      // カウント開始とともにスリープ防止
+      requestWakeLock();
 
       pauseBtn.classList.add('running');
       pauseBtn.classList.remove('paused');
@@ -887,6 +928,7 @@ function resizeFonts() {
               activePlayer = null;
               clearTimer();
               playShotEndBeep();
+              releaseWakeLock();
             }
           }
         } else if (activePlayer === 'B') {
@@ -909,6 +951,7 @@ function resizeFonts() {
               activePlayer = null;
               clearTimer();
               playShotEndBeep();
+              releaseWakeLock();
             }
           }
         }
@@ -919,6 +962,7 @@ function resizeFonts() {
 
     function resetAll() {
       clearTimer();
+      releaseWakeLock();
       timeA = initialMinutesA * 60;
       timeB = initialMinutesB * 60;
       scoreA = 0;
@@ -1127,11 +1171,12 @@ function resizeFonts() {
         pauseBtn.textContent = '再開';
         pauseBtn.classList.remove('running');
         pauseBtn.classList.add('paused');
+        releaseWakeLock();
       } else {
         isPaused = false;
         pauseBtn.textContent = '一時停止';
         pauseBtn.classList.remove('paused');
-        if (activePlayer !== null) startTimerLoop();
+        if (activePlayer !== null) startTimerLoop(); // 中で Wake Lock 再取得
       }
     });
 
@@ -1158,8 +1203,3 @@ function resizeFonts() {
   </script>
 </body>
 </html>
-
-
-
-
-
