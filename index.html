@@ -14,36 +14,26 @@
       --accent: #3fa34d;
       --danger: #c0392b;
       --overtime: #aa6f00;
-      --time-size: 80px;    /* メインTIME */
-      --score-size: 48px;   /* スコア数字 */
-      --label-size: 14px;   /* TIME / SCORE ラベル */
+      --time-size: 80px;    /* メインTIME（JSで上書き） */
+      --score-size: 48px;   /* スコア数字（JSで上書き） */
+      --label-size: 14px;   /* TIME / SCORE ラベル（JSで上書き） */
     }
 
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; }
+
+    html { height: 100%; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-y: auto;
     }
-
-html {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  padding: env(safe-area-inset-top)
-           env(safe-area-inset-right)
-           env(safe-area-inset-bottom)
-           env(safe-area-inset-left);  /* ← ここを追加 */
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text-main);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  overflow-y: auto;
-  box-sizing: border-box;  /* パディング分で縦がはみ出さないように */
-}
-
-
 
     .app {
       flex: 1;
@@ -53,13 +43,12 @@ body {
       flex-direction: column;
       gap: 6px;
       height: 100%;
-      padding: 18px 4px 4px;
+      padding: 14px 4px 4px;
     }
 
-    /* ノッチ・バーに隠れないよう safe area を考慮 */
     @supports (padding: max(0px)) {
       .app {
-        padding-top: max(22px, env(safe-area-inset-top));
+        padding-top: max(14px, env(safe-area-inset-top));
         padding-right: max(4px, env(safe-area-inset-right));
         padding-bottom: max(4px, env(safe-area-inset-bottom));
         padding-left: max(4px, env(safe-area-inset-left));
@@ -70,7 +59,7 @@ body {
       display: flex;
       gap: 6px;
       flex: 1 1 auto;
-      min-height: 0; /* flex内で縮められるようにする */
+      min-height: 0;
     }
 
     .clock {
@@ -176,7 +165,6 @@ body {
       font-weight: 600;
     }
 
-    /* スコア＋−ボタン：大きめタップ領域 */
     .score-btn {
       font-size: clamp(2.0rem, 3.6vw, 2.6rem);
       padding: 10px 16px;
@@ -210,19 +198,38 @@ body {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      font-size: 0.95rem;
+      gap: 14px;
       flex-wrap: wrap;
+      font-size: 0.95rem;
+    }
+
+    .time-settings-side {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 120px;
+      justify-content: center;
     }
 
     .time-settings-label {
-      opacity: 0.8;
+      opacity: 0.85;
+      font-weight: 500;
+      min-width: 2.5em;
+      text-align: right;
     }
 
     .time-settings-value {
       font-size: 1.3rem;
-      min-width: 2.5em;
+      min-width: 2.4em;
       text-align: center;
+    }
+
+    .time-settings-main-label {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      letter-spacing: 0.15em;
+      text-align: center;
+      white-space: nowrap;
     }
 
     .small-btn {
@@ -278,6 +285,25 @@ body {
       filter: brightness(1.1);
     }
 
+    .settings-btn {
+      background: #333;
+      color: #f5f5f5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      opacity: 0.9;
+    }
+
+    .settings-btn span.icon {
+      font-size: 1.1rem;
+    }
+
+    .settings-btn:active {
+      transform: scale(0.97);
+      background: #444;
+    }
+
     @media (max-width: 700px) {
       .clocks {
         flex-direction: column;
@@ -285,6 +311,140 @@ body {
       .clock {
         min-height: 40vh;
       }
+    }
+
+    /* ===== 設定モーダル ===== */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-content {
+      background: #181818;
+      border-radius: 12px;
+      padding: 14px 16px 12px;
+      width: min(420px, 92vw);
+      box-shadow: 0 0 0 2px #000;
+      font-size: 0.95rem;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      border: none;
+      background: transparent;
+      color: #ccc;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .modal-section {
+      border-top: 1px solid #333;
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+
+    .modal-section:first-of-type {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .modal-section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+
+    .modal-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 4px 0;
+    }
+
+    .modal-row-label {
+      opacity: 0.9;
+      font-size: 0.92rem;
+    }
+
+    .modal-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .modal-switch input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .shot-settings {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .shot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .shot-row-label {
+      min-width: 5em;
+      opacity: 0.9;
+    }
+
+    .shot-row-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .shot-display {
+      min-width: 2.4em;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .shot-btn {
+      font-size: 1rem;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: none;
+      background: #333;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .shot-btn:active {
+      transform: scale(0.96);
+      background: #444;
     }
   </style>
 </head>
@@ -330,37 +490,107 @@ body {
 
     <div class="controls">
       <div class="time-settings">
-        <span class="time-settings-label">持ち時間（分）</span>
-        <button class="small-btn" id="minutesMinus">-</button>
-        <span class="time-settings-value" id="minutesDisplay">20</span>
-        <button class="small-btn" id="minutesPlus">+</button>
+        <div class="time-settings-side">
+          <span class="time-settings-label">P1</span>
+          <button class="small-btn" id="minutesMinusA">-</button>
+          <span class="time-settings-value" id="minutesDisplayA">20</span>
+          <button class="small-btn" id="minutesPlusA">+</button>
+        </div>
+
+        <div class="time-settings-main-label">
+          持ち時間（分）
+        </div>
+
+        <div class="time-settings-side">
+          <span class="time-settings-label">P2</span>
+          <button class="small-btn" id="minutesMinusB">-</button>
+          <span class="time-settings-value" id="minutesDisplayB">20</span>
+          <button class="small-btn" id="minutesPlusB">+</button>
+        </div>
       </div>
+
       <div class="main-buttons">
         <button id="pauseBtn">一時停止</button>
+
+        <button id="settingsBtn" class="settings-btn">
+          <span class="icon">⚙</span><span>設定</span>
+        </button>
+
         <button id="resetBtn">リセット</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const OVERTIME_SECONDS = 30;
+  <!-- 設定モーダル -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">設定</div>
+        <button class="modal-close" id="settingsCloseBtn">×</button>
+      </div>
 
-    // デフォルト20分
-    let initialMinutes = 20;
-    let timeA = initialMinutes * 60;
-    let timeB = initialMinutes * 60;
+      <div class="modal-section">
+        <div class="modal-section-title">サウンド</div>
+        <div class="modal-row">
+          <span class="modal-row-label">効果音</span>
+          <label class="modal-switch">
+            <input type="checkbox" id="soundToggle" checked>
+            <span>サウンドを有効にする</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">ショットクロック（秒）</div>
+        <div class="shot-settings">
+          <div class="shot-row">
+            <span class="shot-row-label">P1 ショット</span>
+            <div class="shot-row-controls">
+              <button class="shot-btn" id="shotMinusA">-</button>
+              <span class="shot-display" id="shotDisplayA">30</span>
+              <button class="shot-btn" id="shotPlusA">+</button>
+            </div>
+          </div>
+          <div class="shot-row">
+            <span class="shot-row-label">P2 ショット</span>
+            <div class="shot-row-controls">
+              <button class="shot-btn" id="shotMinusB">-</button>
+              <span class="shot-display" id="shotDisplayB">30</span>
+              <button class="shot-btn" id="shotPlusB">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ショットクロック秒数（P1 / P2）
+    let overtimeSecondsA = 30;
+    let overtimeSecondsB = 30;
+
+    // デフォルト持ち時間（分）
+    let initialMinutesA = 20;
+    let initialMinutesB = 20;
+
+    // 残り秒数
+    let timeA = initialMinutesA * 60;
+    let timeB = initialMinutesB * 60;
     let scoreA = 0;
     let scoreB = 0;
 
     let overtimeA = false;
     let overtimeB = false;
-    let shotTimeA = OVERTIME_SECONDS;
-    let shotTimeB = OVERTIME_SECONDS;
+    let shotTimeA = overtimeSecondsA;
+    let shotTimeB = overtimeSecondsB;
 
     let activePlayer = null;
     let timerId = null;
     let gameOver = false;
     let isPaused = false;
+
+    let soundEnabled = true;
 
     const timeAEl = document.getElementById('timeA');
     const timeBEl = document.getElementById('timeB');
@@ -368,81 +598,148 @@ body {
     const scoreBEl = document.getElementById('scoreB');
     const clockAEl = document.getElementById('clockA');
     const clockBEl = document.getElementById('clockB');
-    const minutesDisplayEl = document.getElementById('minutesDisplay');
-    const minutesPlusEl = document.getElementById('minutesPlus');
-    const minutesMinusEl = document.getElementById('minutesMinus');
+
+    const minutesDisplayAEl = document.getElementById('minutesDisplayA');
+    const minutesDisplayBEl = document.getElementById('minutesDisplayB');
+    const minutesPlusAEl = document.getElementById('minutesPlusA');
+    const minutesMinusAEl = document.getElementById('minutesMinusA');
+    const minutesPlusBEl = document.getElementById('minutesPlusB');
+    const minutesMinusBEl = document.getElementById('minutesMinusB');
+
     const resetBtn = document.getElementById('resetBtn');
     const pauseBtn = document.getElementById('pauseBtn');
 
-// パネル実寸ベースで連続的にリサイズ
-function resizeFonts() {
-  const appEl = document.querySelector('.app');
-  if (!appEl) return;
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const soundToggle = document.getElementById('soundToggle');
 
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+    const shotDisplayAEl = document.getElementById('shotDisplayA');
+    const shotDisplayBEl = document.getElementById('shotDisplayB');
+    const shotMinusAEl = document.getElementById('shotMinusA');
+    const shotPlusAEl = document.getElementById('shotPlusA');
+    const shotMinusBEl = document.getElementById('shotMinusB');
+    const shotPlusBEl = document.getElementById('shotPlusB');
 
-  // .app の内側パディング相当（概算）
-  const padX = 8;           // 左右の余白合計の半分相当
-  const padY = 26;          // 上下（safe-area分を含む）の概算
+    // ===== ビープ音ユーティリティ =====
+    let audioCtx = null;
 
-  // 下部コントロールの占有高さ（概算）
-  const controlsH = 150;    // ここを増減すると全体バランスを調整できる
+    function ensureAudioCtx() {
+      try {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) {
+            audioCtx = new AC();
+          }
+        } else if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {
+        console.warn("audioCtx error:", e);
+      }
+    }
 
-  // 2面の間隔
-  const gutter = 6;
+    function playBeep(freq = 1000, duration = 0.12, type = 'square', volume = 0.25) {
+      if (!soundEnabled) return;
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      ensureAudioCtx();
+      if (!audioCtx) return;
 
-  // レイアウト判定（CSSと同じ閾値）
-  const isVertical = w <= 700;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-  // 1パネルの実効サイズを計算
-  let panelW, panelH;
-  if (isVertical) {
-    // 縦並び：横幅いっぱい、高さは(全高 - コントロール - 余白)/2
-    panelW = Math.max(1, w - padX * 2);
-    panelH = Math.max(1, (h - controlsH - padY * 2 - gutter) / 2);
-  } else {
-    // 横並び：幅は(全幅 - 余白 - ガター)/2、高さは(全高 - コントロール - 余白)
-    panelW = Math.max(1, (w - padX * 2 - gutter) / 2);
-    panelH = Math.max(1,  h - controlsH - padY * 2);
-  }
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
 
-  // フォントサイズを“パネル幅・高さ”の両方に依存させ、はみ出しを防ぐ
-  // 係数は必要なら微調整可（大きくしたければ 0.55 → 0.60 など）
-  let timeSize  = Math.min(panelW * 0.55, panelH * 0.42); // メイン時間
-  let scoreSize = Math.min(panelW * 0.28, panelH * 0.22); // スコア
-  let labelSize = Math.min(panelW * 0.06, panelH * 0.05); // TIME/SCORE ラベル
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
 
-  // 下限・上限
-  const minTime  = 64,  maxTime  = 300;
-  const minScore = 34,  maxScore = 200;
-  const minLabel = 12,  maxLabel = 30;
+      const now = audioCtx.currentTime;
+      osc.start(now);
+      osc.stop(now + duration);
+    }
 
-  timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
-  scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
-  labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
+    function playOvertimeStartBeep() {
+      playBeep(1000, 0.12);
+      setTimeout(() => playBeep(1000, 0.12), 280);
+      setTimeout(() => playBeep(1000, 0.12), 560);
+    }
 
-  // 反映
-  document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-  document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-  document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+    function playShortCountdownBeep() {
+      playBeep(1300, 0.07);
+    }
 
-  // 万一縦方向がギリギリなら、少しだけ縮める安全弁
-  for (let i = 0; i < 6; i++) {
-    const total = appEl.getBoundingClientRect().height;
-    if (total <= window.innerHeight - 2 || timeSize <= minTime + 1) break;
+    function playLongZeroBeep() {
+      playBeep(900, 0.9, 'sine', 0.28);
+    }
 
-    timeSize  *= 0.94;
-    scoreSize *= 0.94;
-    labelSize *= 0.96;
+    function handleShotClockBeep(remaining) {
+      if (remaining === 0) {
+        playLongZeroBeep();
+      } else if (remaining <= 10) {
+        playShortCountdownBeep();
+      }
+    }
 
-    document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-    document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-    document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
-  }
-}
+    // ===== フォントサイズ調整（パネル縦横から一発計算） =====
+    function resizeFonts() {
+      const appEl    = document.querySelector('.app');
+      const clockEls = document.querySelectorAll('.clock');
+      const timeEls  = document.querySelectorAll('.time');
+      if (!appEl || clockEls.length === 0 || timeEls.length === 0) return;
 
+      // まず基準サイズで描画してレイアウトを確定させる
+      document.documentElement.style.setProperty('--time-size',  `80px`);
+      document.documentElement.style.setProperty('--score-size', `48px`);
+      document.documentElement.style.setProperty('--label-size', `14px`);
 
+      requestAnimationFrame(() => {
+        let minPanelW = Infinity;
+        let minPanelH = Infinity;
+
+        clockEls.forEach(clockEl => {
+          const r = clockEl.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            minPanelW = Math.min(minPanelW, r.width);
+            minPanelH = Math.min(minPanelH, r.height);
+          }
+        });
+
+        if (!isFinite(minPanelW) || !isFinite(minPanelH)) return;
+
+        // 「20:00」が収まるフォントサイズを計算
+        const CHAR_COUNT = 5;   // "20:00"
+        const CHAR_RATIO = 0.6; // 1文字 ≒ フォントサイズの0.6倍の幅
+        const H_MARGIN   = 0.90; // 横方向はパネル幅の90%まで使う（左右5%余白）
+
+        const maxTimeByWidth  =
+          (minPanelW * H_MARGIN) / (CHAR_COUNT * CHAR_RATIO);
+        const maxTimeByHeight = minPanelH * 0.60; // 高さ方向はパネルの60%まで
+
+        let timeSize = Math.min(maxTimeByWidth, maxTimeByHeight);
+
+        const MIN_TIME = 50;
+        const MAX_TIME = 600;
+        timeSize = Math.max(MIN_TIME, Math.min(MAX_TIME, timeSize));
+
+        // スコア・ラベルは TIME 比率で決める
+        let scoreSize = timeSize * 0.55;
+        let labelSize = timeSize * 0.18;
+
+        const MIN_SCORE = 30;
+        const MAX_SCORE = 260;
+        const MIN_LABEL = 12;
+        const MAX_LABEL = 36;
+
+        scoreSize = Math.max(MIN_SCORE, Math.min(MAX_SCORE, scoreSize));
+        labelSize = Math.max(MIN_LABEL, Math.min(MAX_LABEL, labelSize));
+
+        document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+        document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+        document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+      });
+    }
 
     function formatTime(sec) {
       const s = Math.max(0, Math.floor(sec));
@@ -496,11 +793,13 @@ function resizeFonts() {
               if (timeA <= 0) {
                 timeA = 0;
                 overtimeA = true;
-                shotTimeA = OVERTIME_SECONDS;
+                shotTimeA = overtimeSecondsA;
+                playOvertimeStartBeep();
               }
             }
           } else if (shotTimeA > 0) {
             shotTimeA--;
+            handleShotClockBeep(shotTimeA);
             if (shotTimeA <= 0) {
               shotTimeA = 0;
               gameOver = true;
@@ -515,11 +814,13 @@ function resizeFonts() {
               if (timeB <= 0) {
                 timeB = 0;
                 overtimeB = true;
-                shotTimeB = OVERTIME_SECONDS;
+                shotTimeB = overtimeSecondsB;
+                playOvertimeStartBeep();
               }
             }
           } else if (shotTimeB > 0) {
             shotTimeB--;
+            handleShotClockBeep(shotTimeB);
             if (shotTimeB <= 0) {
               shotTimeB = 0;
               gameOver = true;
@@ -535,14 +836,14 @@ function resizeFonts() {
 
     function resetAll() {
       clearTimer();
-      timeA = initialMinutes * 60;
-      timeB = initialMinutes * 60;
+      timeA = initialMinutesA * 60;
+      timeB = initialMinutesB * 60;
       scoreA = 0;
       scoreB = 0;
       overtimeA = false;
       overtimeB = false;
-      shotTimeA = OVERTIME_SECONDS;
-      shotTimeB = OVERTIME_SECONDS;
+      shotTimeA = overtimeSecondsA;
+      shotTimeB = overtimeSecondsB;
       activePlayer = null;
       gameOver = false;
       isPaused = false;
@@ -550,12 +851,26 @@ function resizeFonts() {
       updateDisplays();
     }
 
+    // ターン交代時のショットクロック表示リセット
     function switchTurn() {
       if (!activePlayer || gameOver) return;
+
+      // 打っていた側を満タンに戻す
+      if (activePlayer === 'A' && overtimeA) {
+        shotTimeA = overtimeSecondsA;
+      } else if (activePlayer === 'B' && overtimeB) {
+        shotTimeB = overtimeSecondsB;
+      }
+
+      // アクティブ交代
       activePlayer = activePlayer === 'A' ? 'B' : 'A';
 
-      if (activePlayer === 'A' && overtimeA) shotTimeA = OVERTIME_SECONDS;
-      else if (activePlayer === 'B' && overtimeB) shotTimeB = OVERTIME_SECONDS;
+      // 新アクティブ側もオーバータイムなら満タンから
+      if (activePlayer === 'A' && overtimeA) {
+        shotTimeA = overtimeSecondsA;
+      } else if (activePlayer === 'B' && overtimeB) {
+        shotTimeB = overtimeSecondsB;
+      }
 
       updateDisplays();
     }
@@ -563,17 +878,17 @@ function resizeFonts() {
     function handleClockClick(player) {
       if (gameOver || isPaused) return;
 
-      // 最初のスタート
+      ensureAudioCtx();
+
       if (activePlayer === null && timerId === null) {
         activePlayer = player;
-        if (activePlayer === 'A' && overtimeA) shotTimeA = OVERTIME_SECONDS;
-        else if (activePlayer === 'B' && overtimeB) shotTimeB = OVERTIME_SECONDS;
+        if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
+        else if (activePlayer === 'B' && overtimeB) shotTimeB = overtimeSecondsB;
         updateDisplays();
         startTimerLoop();
         return;
       }
 
-      // 自分側パネルタップで相手ターンへ
       if (activePlayer === player) {
         switchTurn();
       }
@@ -582,7 +897,6 @@ function resizeFonts() {
     clockAEl.addEventListener('click', () => handleClockClick('A'));
     clockBEl.addEventListener('click', () => handleClockClick('B'));
 
-    // スコア増減
     document.querySelectorAll('.score-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -595,24 +909,115 @@ function resizeFonts() {
     });
 
     function updateMinutesDisplay() {
-      minutesDisplayEl.textContent = initialMinutes.toString();
+      minutesDisplayAEl.textContent = initialMinutesA.toString();
+      minutesDisplayBEl.textContent = initialMinutesB.toString();
     }
 
-    minutesPlusEl.addEventListener('click', () => {
-      if (initialMinutes < 120) {
-        initialMinutes++;
+    function isGameStarted() {
+      return (
+        activePlayer !== null ||
+        timerId !== null ||
+        overtimeA || overtimeB ||
+        gameOver
+      );
+    }
+
+    function applyMinutesToClocksIfNotStarted() {
+      if (!isGameStarted()) {
+        timeA = initialMinutesA * 60;
+        timeB = initialMinutesB * 60;
+        updateDisplays();
+      }
+    }
+
+    // 持ち時間＋−（P1）
+    minutesPlusAEl.addEventListener('click', () => {
+      if (initialMinutesA < 120) {
+        initialMinutesA++;
         updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
       }
     });
 
-    minutesMinusEl.addEventListener('click', () => {
-      if (initialMinutes > 1) {
-        initialMinutes--;
+    minutesMinusAEl.addEventListener('click', () => {
+      if (initialMinutesA > 1) {
+        initialMinutesA--;
         updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
       }
     });
 
-    // リセットは確認ダイアログ付き
+    // 持ち時間＋−（P2）
+    minutesPlusBEl.addEventListener('click', () => {
+      if (initialMinutesB < 120) {
+        initialMinutesB++;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    minutesMinusBEl.addEventListener('click', () => {
+      if (initialMinutesB > 1) {
+        initialMinutesB--;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    // 設定モーダル関連
+    function syncSettingsUI() {
+      soundToggle.checked = soundEnabled;
+      shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      shotDisplayBEl.textContent = overtimeSecondsB.toString();
+    }
+
+    function openSettings() {
+      syncSettingsUI();
+      settingsModal.classList.add('open');
+    }
+
+    function closeSettings() {
+      settingsModal.classList.remove('open');
+    }
+
+    settingsBtn.addEventListener('click', openSettings);
+    settingsCloseBtn.addEventListener('click', closeSettings);
+
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) closeSettings();
+    });
+
+    soundToggle.addEventListener('change', () => {
+      soundEnabled = soundToggle.checked;
+    });
+
+    function clampShotSeconds(sec) {
+      const min = 10;
+      const max = 90;
+      return Math.max(min, Math.min(max, sec));
+    }
+
+    function applyShotChange(player, delta) {
+      if (player === 'A') {
+        overtimeSecondsA = clampShotSeconds(overtimeSecondsA + delta);
+        shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      } else {
+        overtimeSecondsB = clampShotSeconds(overtimeSecondsB + delta);
+        shotDisplayBEl.textContent = overtimeSecondsB.toString();
+      }
+
+      if (!isGameStarted()) {
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+      }
+    }
+
+    shotPlusAEl.addEventListener('click', () => applyShotChange('A', 5));
+    shotMinusAEl.addEventListener('click', () => applyShotChange('A', -5));
+    shotPlusBEl.addEventListener('click', () => applyShotChange('B', 5));
+    shotMinusBEl.addEventListener('click', () => applyShotChange('B', -5));
+
+    // リセット
     resetBtn.addEventListener('click', () => {
       const ok = window.confirm('タイマーとスコアをすべてリセットします。\nよろしいですか？');
       if (ok) resetAll();
@@ -645,17 +1050,12 @@ function resizeFonts() {
 
     window.addEventListener('resize', resizeFonts);
     window.addEventListener('orientationchange', resizeFonts);
+    window.addEventListener('load', resizeFonts);
 
     // 初期化
-    resizeFonts();
     updateMinutesDisplay();
     resetAll();
+    resizeFonts();
   </script>
 </body>
 </html>
-
-
-
-
-
-
