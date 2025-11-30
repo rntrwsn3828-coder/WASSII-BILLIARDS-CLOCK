@@ -35,7 +35,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      overflow-y: auto; /* はみ出したときにスクロールできるようにする保険 */
+      overflow-y: hidden; /* 高さはJSで調整するので基本スクロールなし */
     }
 
     .app {
@@ -63,6 +63,7 @@
       display: flex;
       gap: 6px;
       flex: 1 1 auto;
+      min-height: 0; /* flex内で縮められるようにする */
     }
 
     .clock {
@@ -79,6 +80,7 @@
       touch-action: manipulation;
       box-shadow: 0 0 0 2px #000;
       transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+      min-height: 0;
     }
 
     .clock:active {
@@ -365,8 +367,11 @@
     const resetBtn = document.getElementById('resetBtn');
     const pauseBtn = document.getElementById('pauseBtn');
 
-    // 画面サイズに応じてフォントサイズ調整
+    // 画面サイズに応じてフォントサイズ調整（はみ出す場合は自動で縮小）
     function resizeFonts() {
+      const appEl = document.querySelector('.app');
+      if (!appEl) return;
+
       const w = window.innerWidth;
       const h = window.innerHeight;
       const isVertical = w <= 700;
@@ -374,7 +379,7 @@
       let timeSize, scoreSize, labelSize;
 
       if (isVertical) {
-        // 縦配置：2面を上下に＋コントロール分を見込む
+        // 縦配置：2面＋コントロール
         const usableHeight = Math.max(300, h - 140);
         const perPanel = usableHeight / 2;
         timeSize = perPanel * 0.42;
@@ -383,9 +388,9 @@
       } else {
         // 横配置：高さ側で強めに制限
         const shortSide = Math.min(w, h);
-        const fromShort = shortSide * 0.18;          // 従来より少し控えめ
-        const usableHeight = Math.max(260, h - 150); // 上下の余白＋ボタンを考慮
-        const fromHeight = usableHeight * 0.30;      // 画面高の3割程度まで
+        const fromShort = shortSide * 0.18;
+        const usableHeight = Math.max(260, h - 150);
+        const fromHeight = usableHeight * 0.30;
 
         timeSize = Math.min(fromShort, fromHeight);
         scoreSize = timeSize * 0.60;
@@ -400,9 +405,25 @@
       scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
       labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
 
-      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+      // いったん設定してから、全体高さを見て必要なら縮小していく
+      for (let i = 0; i < 8; i++) {
+        document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+        document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+        document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+
+        const total = appEl.getBoundingClientRect().height;
+        const viewport = window.innerHeight;
+
+        // 余裕をちょっと見て 4px だけマージン
+        if (total <= viewport - 4 || timeSize <= minTime + 1) {
+          break;
+        }
+
+        // 少しずつ縮小
+        timeSize  *= 0.9;
+        scoreSize *= 0.9;
+        labelSize *= 0.9;
+      }
     }
 
     function formatTime(sec) {
@@ -607,6 +628,7 @@
     window.addEventListener('resize', resizeFonts);
     window.addEventListener('orientationchange', resizeFonts);
 
+    // 初期化
     resizeFonts();
     updateMinutesDisplay();
     resetAll();
