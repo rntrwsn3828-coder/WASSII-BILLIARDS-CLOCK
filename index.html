@@ -32,6 +32,8 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+      /* スマホブラウザのアドレスバー変動に合わせやすくする */
+      min-height: 100dvh;
       overflow-y: auto;
     }
 
@@ -42,7 +44,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      height: 100%;
+      /* 高さはコンテンツに任せる（オーバーしたらスクロール可） */
       padding: 14px 4px 4px;
     }
 
@@ -194,64 +196,11 @@
       margin-top: 2px;
     }
 
-    .time-settings {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      font-size: 0.95rem;
-    }
-
-    .time-settings-side {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 120px;
-      justify-content: center;
-    }
-
-    .time-settings-label {
-      opacity: 0.85;
-      font-weight: 500;
-      min-width: 2.5em;
-      text-align: right;
-    }
-
-    .time-settings-value {
-      font-size: 1.3rem;
-      min-width: 2.4em;
-      text-align: center;
-    }
-
-    .time-settings-main-label {
-      font-size: 0.95rem;
-      opacity: 0.9;
-      letter-spacing: 0.15em;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .small-btn {
-      font-size: 1.1rem;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: none;
-      background: #333;
-      color: var(--text-main);
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
-    .small-btn:active {
-      transform: scale(0.96);
-      background: #444;
-    }
-
     .main-buttons {
       display: flex;
       gap: 8px;
       justify-content: center;
+      flex-wrap: nowrap;
     }
 
     .main-buttons button {
@@ -307,9 +256,16 @@
     @media (max-width: 700px) {
       .clocks {
         flex-direction: column;
+        gap: 4px; /* 少しだけ詰めてボタンのスペースを確保 */
       }
       .clock {
-        min-height: 40vh;
+        /* 2枚で約 68vh に抑えて、下部ボタンが入りやすくする */
+        min-height: 34vh;
+      }
+      .main-buttons button {
+        font-size: 1rem;
+        padding: 8px 12px;
+        max-width: none;
       }
     }
 
@@ -489,26 +445,6 @@
     </div>
 
     <div class="controls">
-      <div class="time-settings">
-        <div class="time-settings-side">
-          <span class="time-settings-label">P1</span>
-          <button class="small-btn" id="minutesMinusA">-</button>
-          <span class="time-settings-value" id="minutesDisplayA">20</span>
-          <button class="small-btn" id="minutesPlusA">+</button>
-        </div>
-
-        <div class="time-settings-main-label">
-          持ち時間（分）
-        </div>
-
-        <div class="time-settings-side">
-          <span class="time-settings-label">P2</span>
-          <button class="small-btn" id="minutesMinusB">-</button>
-          <span class="time-settings-value" id="minutesDisplayB">20</span>
-          <button class="small-btn" id="minutesPlusB">+</button>
-        </div>
-      </div>
-
       <div class="main-buttons">
         <button id="pauseBtn">一時停止</button>
 
@@ -557,6 +493,28 @@
               <button class="shot-btn" id="shotMinusB">-</button>
               <span class="shot-display" id="shotDisplayB">30</span>
               <button class="shot-btn" id="shotPlusB">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">持ち時間（分）</div>
+        <div class="shot-settings">
+          <div class="shot-row">
+            <span class="shot-row-label">P1 持ち時間</span>
+            <div class="shot-row-controls">
+              <button class="shot-btn" id="minutesMinusA">-</button>
+              <span class="shot-display" id="minutesDisplayA">20</span>
+              <button class="shot-btn" id="minutesPlusA">+</button>
+            </div>
+          </div>
+          <div class="shot-row">
+            <span class="shot-row-label">P2 持ち時間</span>
+            <div class="shot-row-controls">
+              <button class="shot-btn" id="minutesMinusB">-</button>
+              <span class="shot-display" id="minutesDisplayB">20</span>
+              <button class="shot-btn" id="minutesPlusB">+</button>
             </div>
           </div>
         </div>
@@ -969,6 +927,8 @@
       soundToggle.checked = soundEnabled;
       shotDisplayAEl.textContent = overtimeSecondsA.toString();
       shotDisplayBEl.textContent = overtimeSecondsB.toString();
+      minutesDisplayAEl.textContent = initialMinutesA.toString();
+      minutesDisplayBEl.textContent = initialMinutesB.toString();
     }
 
     function openSettings() {
