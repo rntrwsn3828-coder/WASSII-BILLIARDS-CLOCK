@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>WASSII BILLIARDS CLOCK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    :root {
+      --bg: #101010;
+      --panel: #202020;
+      --panel-active: #2d4a2d;
+      --panel-finished: #4a2020;
+      --text-main: #f5f5f5;
+      --accent: #3fa34d;
+      --danger: #c0392b;
+      --overtime: #aa6f00;
+      --time-size: 80px;    /* メインTIME */
+      --score-size: 48px;   /* スコア数字 */
+      --label-size: 14px;   /* TIME / SCORE ラベル */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 4px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .app {
+      flex: 1;
+      width: 100%;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+    }
+
+    .clocks {
+      display: flex;
+      gap: 8px;
+      flex: 1 1 auto;
+    }
+
+    .clock {
+      flex: 1;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: stretch;
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      box-shadow: 0 0 0 2px #000;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+    }
+
+    .clock:active {
+      transform: scale(0.98);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .clock.active {
+      background: var(--panel-active);
+      box-shadow: 0 0 0 3px var(--accent);
+    }
+
+    .clock.overtime {
+      box-shadow: 0 0 0 3px var(--overtime);
+    }
+
+    .clock.finished {
+      background: var(--panel-finished);
+      box-shadow: 0 0 0 3px var(--danger);
+    }
+
+    .player-label {
+      font-size: clamp(1.6rem, 3.0vw, 2.2rem);
+      font-weight: 600;
+      opacity: 0.9;
+      letter-spacing: 0.10em;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.35);
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .field-caption {
+      font-size: var(--label-size);
+      font-weight: 500;
+      opacity: 0.8;
+      letter-spacing: 0.20em;
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+
+    .clock.overtime .field-caption {
+      color: var(--overtime);
+      opacity: 0.9;
+    }
+
+    .time-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      margin-top: 2px;
+    }
+
+    .time {
+      font-size: var(--time-size);
+      font-weight: 600;
+      text-align: center;
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    .score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .score {
+      font-size: var(--score-size);
+      min-width: 2.4em;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    /* ★ スコア＋−ボタンを大きくタップしやすく */
+    .score-btn {
+      font-size: clamp(2.0rem, 3.6vw, 2.6rem);
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      background: #333;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+      min-width: 64px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-btn:active {
+      transform: scale(0.95);
+      background: #444;
+    }
+
+    .controls {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .time-settings {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      flex-wrap: wrap;
+    }
+
+    .time-settings-label {
+      opacity: 0.8;
+    }
+
+    .time-settings-value {
+      font-size: 1.3rem;
+      min-width: 2.5em;
+      text-align: center;
+    }
+
+    .small-btn {
+      font-size: 1.1rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: none;
+      background: #333;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .small-btn:active {
+      transform: scale(0.96);
+      background: #444;
+    }
+
+    .main-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .main-buttons button {
+      flex: 1;
+      max-width: 220px;
+      font-size: 1.1rem;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #pauseBtn {
+      background: #555;
+      color: #fff;
+    }
+
+    #pauseBtn:active {
+      transform: scale(0.97);
+      filter: brightness(1.1);
+    }
+
+    #resetBtn {
+      background: #444;
+      color: #fff;
+    }
+
+    #resetBtn:active {
+      transform: scale(0.97);
+      filter: brightness(1.1);
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 4px;
+      }
+      .clocks {
+        flex-direction: column;
+      }
+      .clock {
+        min-height: 40vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="clocks">
+      <div class="clock" data-player="A" id="clockA">
+        <div class="player-label" contenteditable="true">PLAYER 1</div>
+
+        <div class="time-block">
+          <div class="field-caption">TIME</div>
+          <div class="time" id="timeA">20:00</div>
+        </div>
+
+        <div class="score-block">
+          <div class="field-caption">SCORE</div>
+          <div class="score-row">
+            <button class="score-btn" data-player="A" data-delta="-1">-</button>
+            <div class="score" id="scoreA">0</div>
+            <button class="score-btn" data-player="A" data-delta="1">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="clock" data-player="B" id="clockB">
+        <div class="player-label" contenteditable="true">PLAYER 2</div>
+
+        <div class="time-block">
+          <div class="field-caption">TIME</div>
+          <div class="time" id="timeB">20:00</div>
+        </div>
+
+        <div class="score-block">
+          <div class="field-caption">SCORE</div>
+          <div class="score-row">
+            <button class="score-btn" data-player="B" data-delta="-1">-</button>
+            <div class="score" id="scoreB">0</div>
+            <button class="score-btn" data-player="B" data-delta="1">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="time-settings">
+        <span class="time-settings-label">持ち時間（分）</span>
+        <button class="small-btn" id="minutesMinus">-</button>
+        <span class="time-settings-value" id="minutesDisplay">20</span>
+        <button class="small-btn" id="minutesPlus">+</button>
+      </div>
+      <div class="main-buttons">
+        <button id="pauseBtn">一時停止</button>
+        <button id="resetBtn">リセット</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const OVERTIME_SECONDS = 30;
+
+    // デフォルト20分
+    let initialMinutes = 20;
+    let timeA = initialMinutes * 60;
+    let timeB = initialMinutes * 60;
+    let scoreA = 0;
+    let scoreB = 0;
+
+    let overtimeA = false;
+    let overtimeB = false;
+    let shotTimeA = OVERTIME_SECONDS;
+    let shotTimeB = OVERTIME_SECONDS;
+
+    let activePlayer = null;
+    let timerId = null;
+    let gameOver = false;
+    let isPaused = false;
+
+    const timeAEl = document.getElementById('timeA');
+    const timeBEl = document.getElementById('timeB');
+    const scoreAEl = document.getElementById('scoreA');
+    const scoreBEl = document.getElementById('scoreB');
+    const clockAEl = document.getElementById('clockA');
+    const clockBEl = document.getElementById('clockB');
+    const minutesDisplayEl = document.getElementById('minutesDisplay');
+    const minutesPlusEl = document.getElementById('minutesPlus');
+    const minutesMinusEl = document.getElementById('minutesMinus');
+    const resetBtn = document.getElementById('resetBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    // 画面サイズに応じてフォントサイズ調整
+    function resizeFonts() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const isVertical = w <= 700;
+
+      let timeSize, scoreSize, labelSize;
+
+      if (isVertical) {
+        const usableHeight = h - 120;
+        const perPanel = usableHeight / 2;
+        timeSize = perPanel * 0.45;
+        scoreSize = perPanel * 0.25;
+        labelSize = perPanel * 0.06;
+      } else {
+        const shortSide = Math.min(w, h);
+        timeSize = shortSide * 0.20;
+        scoreSize = shortSide * 0.13;
+        labelSize = shortSide * 0.035;
+      }
+
+      const minTime = 40,  maxTime = 200;
+      const minScore = 28, maxScore = 140;
+      const minLabel = 11, maxLabel = 26;
+
+      timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
+      scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
+      labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
+
+      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m.toString().padStart(2, '0') + ':' + r.toString().padStart(2, '0');
+    }
+
+    function updateDisplays() {
+      timeAEl.textContent = !overtimeA ? formatTime(timeA) : formatTime(shotTimeA);
+      timeBEl.textContent = !overtimeB ? formatTime(timeB) : formatTime(shotTimeB);
+      scoreAEl.textContent = scoreA.toString();
+      scoreBEl.textContent = scoreB.toString();
+
+      const finishedA = (!overtimeA && timeA === 0) || (overtimeA && shotTimeA === 0);
+      const finishedB = (!overtimeB && timeB === 0) || (overtimeB && shotTimeB === 0);
+
+      clockAEl.classList.toggle('finished', finishedA && gameOver);
+      clockBEl.classList.toggle('finished', finishedB && gameOver);
+
+      clockAEl.classList.toggle('overtime', overtimeA);
+      clockBEl.classList.toggle('overtime', overtimeB);
+
+      clockAEl.classList.remove('active');
+      clockBEl.classList.remove('active');
+      if (activePlayer === 'A') clockAEl.classList.add('active');
+      else if (activePlayer === 'B') clockBEl.classList.add('active');
+    }
+
+    function clearTimer() {
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function startTimerLoop() {
+      clearTimer();
+      if (!activePlayer || gameOver || isPaused) return;
+
+      timerId = setInterval(() => {
+        if (gameOver || !activePlayer || isPaused) {
+          clearTimer();
+          return;
+        }
+
+        if (activePlayer === 'A') {
+          if (!overtimeA) {
+            if (timeA > 0) {
+              timeA--;
+              if (timeA <= 0) {
+                timeA = 0;
+                overtimeA = true;
+                shotTimeA = OVERTIME_SECONDS;
+              }
+            }
+          } else if (shotTimeA > 0) {
+            shotTimeA--;
+            if (shotTimeA <= 0) {
+              shotTimeA = 0;
+              gameOver = true;
+              activePlayer = null;
+              clearTimer();
+            }
+          }
+        } else if (activePlayer === 'B') {
+          if (!overtimeB) {
+            if (timeB > 0) {
+              timeB--;
+              if (timeB <= 0) {
+                timeB = 0;
+                overtimeB = true;
+                shotTimeB = OVERTIME_SECONDS;
+              }
+            }
+          } else if (shotTimeB > 0) {
+            shotTimeB--;
+            if (shotTimeB <= 0) {
+              shotTimeB = 0;
+              gameOver = true;
+              activePlayer = null;
+              clearTimer();
+            }
+          }
+        }
+
+        updateDisplays();
+      }, 1000);
+    }
+
+    function resetAll() {
+      clearTimer();
+      timeA = initialMinutes * 60;
+      timeB = initialMinutes * 60;
+      scoreA = 0;
+      scoreB = 0;
+      overtimeA = false;
+      overtimeB = false;
+      shotTimeA = OVERTIME_SECONDS;
+      shotTimeB = OVERTIME_SECONDS;
+      activePlayer = null;
+      gameOver = false;
+      isPaused = false;
+      pauseBtn.textContent = '一時停止';
+      updateDisplays();
+    }
+
+    function switchTurn() {
+      if (!activePlayer || gameOver) return;
+      activePlayer = activePlayer === 'A' ? 'B' : 'A';
+
+      if (activePlayer === 'A' && overtimeA) shotTimeA = OVERTIME_SECONDS;
+      else if (activePlayer === 'B' && overtimeB) shotTimeB = OVERTIME_SECONDS;
+
+      updateDisplays();
+    }
+
+    function handleClockClick(player) {
+      if (gameOver || isPaused) return;
+
+      if (activePlayer === null && timerId === null) {
+        activePlayer = player;
+        if (activePlayer === 'A' && overtimeA) shotTimeA = OVERTIME_SECONDS;
+        else if (activePlayer === 'B' && overtimeB) shotTimeB = OVERTIME_SECONDS;
+        updateDisplays();
+        startTimerLoop();
+        return;
+      }
+
+      if (activePlayer === player) switchTurn();
+    }
+
+    clockAEl.addEventListener('click', () => handleClockClick('A'));
+    clockBEl.addEventListener('click', () => handleClockClick('B'));
+
+    // スコア増減
+    document.querySelectorAll('.score-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const player = btn.dataset.player;
+        const delta = parseInt(btn.dataset.delta, 10) || 0;
+        if (player === 'A') scoreA = Math.max(0, scoreA + delta);
+        else scoreB = Math.max(0, scoreB + delta);
+        updateDisplays();
+      });
+    });
+
+    function updateMinutesDisplay() {
+      minutesDisplayEl.textContent = initialMinutes.toString();
+    }
+
+    minutesPlusEl.addEventListener('click', () => {
+      if (initialMinutes < 120) {
+        initialMinutes++;
+        updateMinutesDisplay();
+      }
+    });
+
+    minutesMinusEl.addEventListener('click', () => {
+      if (initialMinutes > 1) {
+        initialMinutes--;
+        updateMinutesDisplay();
+      }
+    });
+
+    // ★ リセットだけ確認ダイアログ付き
+    resetBtn.addEventListener('click', () => {
+      const ok = window.confirm('タイマーとスコアをすべてリセットします。\nよろしいですか？');
+      if (ok) resetAll();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      if (gameOver) return;
+      if (!isPaused) {
+        isPaused = true;
+        clearTimer();
+        pauseBtn.textContent = '再開';
+      } else {
+        isPaused = false;
+        pauseBtn.textContent = '一時停止';
+        if (activePlayer !== null) startTimerLoop();
+      }
+    });
+
+    document.querySelectorAll('.player-label').forEach(label => {
+      label.addEventListener('click', e => e.stopPropagation());
+      label.addEventListener('touchstart', e => e.stopPropagation());
+      label.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          label.blur();
+        }
+      });
+    });
+
+    window.addEventListener('resize', resizeFonts);
+    window.addEventListener('orientationchange', resizeFonts);
+
+    resizeFonts();
+    updateMinutesDisplay();
+    resetAll();
+  </script>
+</body>
+</html>
