@@ -765,25 +765,26 @@
 function resizeFonts() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const base = Math.min(w, h);  // 画面の短い辺
+  const base = Math.min(w, h);  // 画面の短い辺を基準にする
 
   let timeSize, scoreSize;
   const labelSize = Math.max(11, base * 0.018);
 
   if (base <= 700) {
-    // スマホ縦など、縦が狭いとき（いまの挙動を維持）
-    timeSize  = Math.max(36, base * 0.10);
-    scoreSize = Math.max(30, base * 0.06);
+    // スマホ（縦・横どちらも）用：文字をかなり大きく
+    timeSize  = Math.max(40, base * 0.16);  // 以前は 0.10
+    scoreSize = Math.max(32, base * 0.085); // 以前は 0.06
   } else {
-    // デスクトップなど、縦に余裕があるときはもっと大きく
-    timeSize  = Math.max(48, base * 0.20);  // ← ここを強めた
-    scoreSize = Math.max(36, base * 0.09);  // ← スコアも拡大
+    // PC など縦に余裕がある画面
+    timeSize  = Math.max(48, base * 0.20);
+    scoreSize = Math.max(36, base * 0.09);
   }
 
   document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
   document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
   document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
 }
+
 
     function formatTime(sec) {
       const s = Math.max(0, sec);
@@ -1147,3 +1148,4 @@ function resizeFonts() {
   </script>
 </body>
 </html>
+
