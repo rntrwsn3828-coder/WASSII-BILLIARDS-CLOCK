@@ -387,45 +387,45 @@ function resizeFonts() {
 
   if (isVertical) {
     // 縦配置：2面＋コントロール
-    const usableHeight = Math.max(300, h - 140);
+    const usableHeight = Math.max(320, h - 140);
     const perPanel = usableHeight / 2;
-    timeSize = perPanel * 0.45;
-    scoreSize = perPanel * 0.26;
+    timeSize  = perPanel * 0.50;  // 0.45 → 0.50 にアップ
+    scoreSize = perPanel * 0.30;  // 0.26 → 0.30 にアップ
     labelSize = perPanel * 0.06;
   } else {
+    // 横配置（スマホ横向き・タブレット横向き）
     const shortSide = Math.min(w, h);
 
     if (h >= 600) {
-      // PC や高さに余裕があるタブレット：しっかり大きく
-      timeSize  = shortSide * 0.23;
-      scoreSize = shortSide * 0.14;
+      // 高さに余裕があるとき → しっかり大きく
+      timeSize  = shortSide * 0.27;  // 0.23 → 0.27
+      scoreSize = shortSide * 0.16;  // 0.14 → 0.16
       labelSize = shortSide * 0.04;
     } else {
-      // 高さが低い（スマホ横向きなど）：控えめに
-      const usableHeight = Math.max(260, h - 150);
-      const fromHeight   = usableHeight * 0.32;
-      const fromShort    = shortSide   * 0.18;
+      // 高さが低い（スマホ横向き）とき
+      const usableHeight = Math.max(260, h - 120);
+      const fromHeight   = usableHeight * 0.40;  // 0.32 → 0.40
+      const fromShort    = shortSide   * 0.24;   // 0.18 → 0.24
       timeSize  = Math.min(fromHeight, fromShort);
       scoreSize = timeSize * 0.60;
-      labelSize = timeSize * 0.18;
+      labelSize = timeSize * 0.17;
     }
   }
 
-  const minTime  = 40,  maxTime  = 220;
-  const minScore = 26,  maxScore = 150;
-  const minLabel = 11,  maxLabel = 26;
+  // 下限・上限も少し引き上げ
+  const minTime  = 52,  maxTime  = 260;
+  const minScore = 28,  maxScore = 170;
+  const minLabel = 11,  maxLabel = 28;
 
   timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
   scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
   labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
 
-  // まず基準サイズをセット
   document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
   document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
   document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
 
-  // 高さが小さい端末（スマホ横向きなど）のときだけ、
-  // はみ出すなら少しずつ縮める
+  // 高さが小さい端末でだけ、はみ出すならちょっとずつ縮める調整
   if (h < 600) {
     for (let i = 0; i < 8; i++) {
       const total    = appEl.getBoundingClientRect().height;
@@ -443,6 +443,7 @@ function resizeFonts() {
     }
   }
 }
+
 
 
     function formatTime(sec) {
@@ -654,6 +655,7 @@ function resizeFonts() {
   </script>
 </body>
 </html>
+
 
 
 
