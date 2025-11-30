@@ -758,9 +758,19 @@
       playBeep(600, 0.8, 'sawtooth', 0.3); // ここが最後の「ピーーーー」
     }
 
-    function playOvertimeStartBeep() {
-      playBeep(400, 0.4, 'triangle', 0.3);
-    }
+// ショットクロックモード突入時：ピ・ピ・ピ
+function playOvertimeStartBeep() {
+  if (!soundEnabled) return;
+
+  const delays = [0, 150, 300]; // ms単位の遅延時間（0ms, 150ms, 300ms）
+
+  delays.forEach((d) => {
+    setTimeout(() => {
+      // 短いビープを3回
+      playBeep(900, 0.10, 'square', 0.25);
+    }, d);
+  });
+}
 
 function resizeFonts() {
   const w = window.innerWidth;
@@ -1148,6 +1158,7 @@ function resizeFonts() {
   </script>
 </body>
 </html>
+
 
 
 
