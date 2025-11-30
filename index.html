@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>WASSII BILLIARDS CLOCK</title>
+  <title>ビリヤード スコア＆タイムクロック</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
   <style>
     :root {
       --bg: #101010;
@@ -24,27 +23,19 @@
       box-sizing: border-box;
     }
 
+    html, body {
+      height: 100%;
+    }
+
     body {
-  margin: 0;
-  padding: 4px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text-main);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* ノッチ付き端末やスマホブラウザで上が隠れないようにする */
-@supports(padding: max(0px)) {
-  body {
-    padding-top: max(8px, env(safe-area-inset-top));
-    padding-right: max(4px, env(safe-area-inset-right));
-    padding-bottom: max(4px, env(safe-area-inset-bottom));
-    padding-left: max(4px, env(safe-area-inset-left));
-  }
-}
-
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
     .app {
       flex: 1;
@@ -54,6 +45,18 @@
       flex-direction: column;
       gap: 8px;
       height: 100%;
+      /* デフォルト余白（古いブラウザ用） */
+      padding: 20px 4px 4px;
+    }
+
+    /* ノッチ・スマホブラウザのバーに隠れないよう safe area を考慮 */
+    @supports (padding: max(0px)) {
+      .app {
+        padding-top: max(24px, env(safe-area-inset-top));
+        padding-right: max(4px, env(safe-area-inset-right));
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
+        padding-left: max(4px, env(safe-area-inset-left));
+      }
     }
 
     .clocks {
@@ -164,7 +167,7 @@
       font-weight: 600;
     }
 
-    /* ★ スコア＋−ボタンを大きくタップしやすく */
+    /* スコア＋−ボタン：大きめタップ領域 */
     .score-btn {
       font-size: clamp(2.0rem, 3.6vw, 2.6rem);
       padding: 10px 18px;
@@ -190,7 +193,7 @@
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       margin-top: 4px;
     }
 
@@ -267,9 +270,6 @@
     }
 
     @media (max-width: 700px) {
-      body {
-        padding: 4px;
-      }
       .clocks {
         flex-direction: column;
       }
@@ -518,6 +518,7 @@
     function handleClockClick(player) {
       if (gameOver || isPaused) return;
 
+      // 最初のスタート
       if (activePlayer === null && timerId === null) {
         activePlayer = player;
         if (activePlayer === 'A' && overtimeA) shotTimeA = OVERTIME_SECONDS;
@@ -527,7 +528,10 @@
         return;
       }
 
-      if (activePlayer === player) switchTurn();
+      // 自分側パネルタップで相手ターンへ
+      if (activePlayer === player) {
+        switchTurn();
+      }
     }
 
     clockAEl.addEventListener('click', () => handleClockClick('A'));
@@ -563,7 +567,7 @@
       }
     });
 
-    // ★ リセットだけ確認ダイアログ付き
+    // リセットは確認ダイアログ付き
     resetBtn.addEventListener('click', () => {
       const ok = window.confirm('タイマーとスコアをすべてリセットします。\nよろしいですか？');
       if (ok) resetAll();
@@ -582,6 +586,7 @@
       }
     });
 
+    // プレイヤーネーム編集
     document.querySelectorAll('.player-label').forEach(label => {
       label.addEventListener('click', e => e.stopPropagation());
       label.addEventListener('touchstart', e => e.stopPropagation());
@@ -602,4 +607,3 @@
   </script>
 </body>
 </html>
-
