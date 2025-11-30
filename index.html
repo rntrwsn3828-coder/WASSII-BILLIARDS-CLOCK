@@ -35,6 +35,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+      overflow-y: auto; /* はみ出したときにスクロールできるようにする保険 */
     }
 
     .app {
@@ -43,16 +44,15 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       height: 100%;
-      /* デフォルト余白（古いブラウザ用） */
-      padding: 20px 4px 4px;
+      padding: 18px 4px 4px;
     }
 
-    /* ノッチ・スマホブラウザのバーに隠れないよう safe area を考慮 */
+    /* ノッチ・バーに隠れないよう safe area を考慮 */
     @supports (padding: max(0px)) {
       .app {
-        padding-top: max(24px, env(safe-area-inset-top));
+        padding-top: max(22px, env(safe-area-inset-top));
         padding-right: max(4px, env(safe-area-inset-right));
         padding-bottom: max(4px, env(safe-area-inset-bottom));
         padding-left: max(4px, env(safe-area-inset-left));
@@ -61,7 +61,7 @@
 
     .clocks {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex: 1 1 auto;
     }
 
@@ -69,7 +69,7 @@
       flex: 1;
       background: var(--panel);
       border-radius: 12px;
-      padding: 10px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -106,8 +106,8 @@
       opacity: 0.9;
       letter-spacing: 0.10em;
       border-bottom: 1px dashed rgba(255, 255, 255, 0.35);
-      padding-bottom: 6px;
-      margin-bottom: 6px;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
       outline: none;
       white-space: nowrap;
       overflow: hidden;
@@ -120,8 +120,8 @@
       opacity: 0.8;
       letter-spacing: 0.20em;
       text-align: center;
-      margin-top: 4px;
-      margin-bottom: 4px;
+      margin-top: 2px;
+      margin-bottom: 2px;
     }
 
     .clock.overtime .field-caption {
@@ -149,15 +149,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .score-row {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      margin-top: 6px;
+      gap: 10px;
+      margin-top: 4px;
     }
 
     .score {
@@ -170,15 +170,15 @@
     /* スコア＋−ボタン：大きめタップ領域 */
     .score-btn {
       font-size: clamp(2.0rem, 3.6vw, 2.6rem);
-      padding: 10px 18px;
+      padding: 10px 16px;
       border-radius: 999px;
       border: none;
       background: #333;
       color: var(--text-main);
       cursor: pointer;
       touch-action: manipulation;
-      min-width: 64px;
-      min-height: 64px;
+      min-width: 60px;
+      min-height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -194,7 +194,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .time-settings {
@@ -374,21 +374,27 @@
       let timeSize, scoreSize, labelSize;
 
       if (isVertical) {
-        const usableHeight = h - 120;
+        // 縦配置：2面を上下に＋コントロール分を見込む
+        const usableHeight = Math.max(300, h - 140);
         const perPanel = usableHeight / 2;
-        timeSize = perPanel * 0.45;
-        scoreSize = perPanel * 0.25;
-        labelSize = perPanel * 0.06;
+        timeSize = perPanel * 0.42;
+        scoreSize = perPanel * 0.24;
+        labelSize = perPanel * 0.055;
       } else {
+        // 横配置：高さ側で強めに制限
         const shortSide = Math.min(w, h);
-        timeSize = shortSide * 0.20;
-        scoreSize = shortSide * 0.13;
-        labelSize = shortSide * 0.035;
+        const fromShort = shortSide * 0.18;          // 従来より少し控えめ
+        const usableHeight = Math.max(260, h - 150); // 上下の余白＋ボタンを考慮
+        const fromHeight = usableHeight * 0.30;      // 画面高の3割程度まで
+
+        timeSize = Math.min(fromShort, fromHeight);
+        scoreSize = timeSize * 0.60;
+        labelSize = timeSize * 0.18;
       }
 
       const minTime = 40,  maxTime = 200;
-      const minScore = 28, maxScore = 140;
-      const minLabel = 11, maxLabel = 26;
+      const minScore = 26, maxScore = 130;
+      const minLabel = 11, maxLabel = 24;
 
       timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
       scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
@@ -607,4 +613,3 @@
   </script>
 </body>
 </html>
-
