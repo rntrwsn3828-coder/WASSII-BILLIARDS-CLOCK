@@ -367,64 +367,76 @@
     const resetBtn = document.getElementById('resetBtn');
     const pauseBtn = document.getElementById('pauseBtn');
 
-    // 画面サイズに応じてフォントサイズ調整（はみ出す場合は自動で縮小）
-    function resizeFonts() {
-      const appEl = document.querySelector('.app');
-      if (!appEl) return;
+// 画面サイズに応じてフォントサイズ調整
+function resizeFonts() {
+  const appEl = document.querySelector('.app');
+  if (!appEl) return;
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const isVertical = w <= 700;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const isVertical = w <= 700;
 
-      let timeSize, scoreSize, labelSize;
+  let timeSize, scoreSize, labelSize;
 
-      if (isVertical) {
-        // 縦配置：2面＋コントロール
-        const usableHeight = Math.max(300, h - 140);
-        const perPanel = usableHeight / 2;
-        timeSize = perPanel * 0.42;
-        scoreSize = perPanel * 0.24;
-        labelSize = perPanel * 0.055;
-      } else {
-        // 横配置：高さ側で強めに制限
-        const shortSide = Math.min(w, h);
-        const fromShort = shortSide * 0.18;
-        const usableHeight = Math.max(260, h - 150);
-        const fromHeight = usableHeight * 0.30;
+  if (isVertical) {
+    // 縦配置：2面＋コントロール
+    const usableHeight = Math.max(300, h - 140);
+    const perPanel = usableHeight / 2;
+    timeSize = perPanel * 0.45;
+    scoreSize = perPanel * 0.26;
+    labelSize = perPanel * 0.06;
+  } else {
+    const shortSide = Math.min(w, h);
 
-        timeSize = Math.min(fromShort, fromHeight);
-        scoreSize = timeSize * 0.60;
-        labelSize = timeSize * 0.18;
-      }
-
-      const minTime = 40,  maxTime = 200;
-      const minScore = 26, maxScore = 130;
-      const minLabel = 11, maxLabel = 24;
-
-      timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
-      scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
-      labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
-
-      // いったん設定してから、全体高さを見て必要なら縮小していく
-      for (let i = 0; i < 8; i++) {
-        document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-        document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-        document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
-
-        const total = appEl.getBoundingClientRect().height;
-        const viewport = window.innerHeight;
-
-        // 余裕をちょっと見て 4px だけマージン
-        if (total <= viewport - 4 || timeSize <= minTime + 1) {
-          break;
-        }
-
-        // 少しずつ縮小
-        timeSize  *= 0.9;
-        scoreSize *= 0.9;
-        labelSize *= 0.9;
-      }
+    if (h >= 600) {
+      // PC や高さに余裕があるタブレット：しっかり大きく
+      timeSize  = shortSide * 0.23;
+      scoreSize = shortSide * 0.14;
+      labelSize = shortSide * 0.04;
+    } else {
+      // 高さが低い（スマホ横向きなど）：控えめに
+      const usableHeight = Math.max(260, h - 150);
+      const fromHeight   = usableHeight * 0.32;
+      const fromShort    = shortSide   * 0.18;
+      timeSize  = Math.min(fromHeight, fromShort);
+      scoreSize = timeSize * 0.60;
+      labelSize = timeSize * 0.18;
     }
+  }
+
+  const minTime  = 40,  maxTime  = 220;
+  const minScore = 26,  maxScore = 150;
+  const minLabel = 11,  maxLabel = 26;
+
+  timeSize  = Math.max(minTime,  Math.min(maxTime,  timeSize));
+  scoreSize = Math.max(minScore, Math.min(maxScore, scoreSize));
+  labelSize = Math.max(minLabel, Math.min(maxLabel, labelSize));
+
+  // まず基準サイズをセット
+  document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+  document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+  document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+
+  // 高さが小さい端末（スマホ横向きなど）のときだけ、
+  // はみ出すなら少しずつ縮める
+  if (h < 600) {
+    for (let i = 0; i < 8; i++) {
+      const total    = appEl.getBoundingClientRect().height;
+      const viewport = window.innerHeight;
+
+      if (total <= viewport - 4 || timeSize <= minTime + 1) break;
+
+      timeSize  *= 0.9;
+      scoreSize *= 0.9;
+      labelSize *= 0.9;
+
+      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+    }
+  }
+}
+
 
     function formatTime(sec) {
       const s = Math.max(0, Math.floor(sec));
@@ -635,3 +647,4 @@
   </script>
 </body>
 </html>
+
