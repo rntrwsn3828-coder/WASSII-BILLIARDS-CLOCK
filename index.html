@@ -376,8 +376,6 @@
       box-shadow:
         0 0 0 1px #000,
         0 16px 40px rgba(0, 0, 0, 0.85);
-
-      /* 画面からはみ出さないようにしつつ、中身はスクロール */
       max-height: calc(100vh - 32px);
       overflow-y: auto;
     }
@@ -696,7 +694,6 @@
         <div class="modal-section">
           <div class="modal-section-title">エクステンション</div>
 
-          <!-- ON/OFF トグル -->
           <div class="settings-row" style="border-bottom:none; padding-top:2px; padding-bottom:4px;">
             <div class="settings-label">使用</div>
             <div class="settings-toggle">
@@ -964,7 +961,7 @@
       }
     }
 
-    // 余白を使い切るまで TIME / SCORE を自動調整
+    // ==== フォント自動調整：大きめから「はみ出す分だけ」縮める ====
     function resizeFonts() {
       const root = document.documentElement;
       const app = document.querySelector('.app');
@@ -974,59 +971,46 @@
       const h = window.innerHeight;
       const shortSide = Math.min(w, h);
 
-      // ラベルサイズ
-      const labelSize = Math.max(11, shortSide * 0.018);
+      // 実際に見えている高さ（アドレスバー等を除外）
+      const viewportH = (window.visualViewport && window.visualViewport.height)
+        ? window.visualViewport.height
+        : window.innerHeight;
+
+      const labelSize = Math.max(11, shortSide * 0.02);
       root.style.setProperty('--label-size', `${labelSize}px`);
 
-      // ベース値（端末サイズだけでざっくり決める）
+      // 最初は「かなり大きめ」に設定しておいて、下のループで必要に応じて縮める
       let timeSize, scoreSize;
       if (shortSide <= 700) {
-        // スマホ〜小型タブレット
-        timeSize  = Math.max(36, shortSide * 0.22);
-        scoreSize = Math.max(28, shortSide * 0.16);
+        // スマホ〜小型タブレット（横持ち含む）
+        timeSize  = shortSide * 0.38;  // かなり大きく
+        scoreSize = shortSide * 0.24;
       } else {
         // 大きめタブレット・PC
-        timeSize  = Math.max(48, shortSide * 0.26);
-        scoreSize = Math.max(36, shortSide * 0.20);
+        timeSize  = shortSide * 0.32;
+        scoreSize = shortSide * 0.20;
       }
+
+      // 上限・下限
+      timeSize  = Math.max(40, Math.min(timeSize, 320));
+      scoreSize = Math.max(30, Math.min(scoreSize, 220));
 
       root.style.setProperty('--time-size',  `${timeSize}px`);
       root.style.setProperty('--score-size', `${scoreSize}px`);
 
-      // app 全体が画面内に収まっているかチェック
       const fits = () => {
         const rect = app.getBoundingClientRect();
-        const available = window.innerHeight;
-        return rect.bottom <= available - 2;
+        return rect.bottom <= viewportH - 2;
       };
 
-      // もしベースが大きすぎればまず縮める
+      // 画面に収まるまで少しずつ縮める
       let guard = 0;
-      while (!fits() && guard < 40 && timeSize > 30) {
+      while (!fits() && guard < 80 && timeSize > 40) {
         timeSize  -= 2;
         scoreSize -= 1.4;
         root.style.setProperty('--time-size',  `${timeSize}px`);
         root.style.setProperty('--score-size', `${scoreSize}px`);
         guard++;
-      }
-
-      // そこから「はみ出さない範囲で」拡大
-      guard = 0;
-      while (fits() && guard < 40) {
-        timeSize  += 2;
-        scoreSize += 1.4;
-        root.style.setProperty('--time-size',  `${timeSize}px`);
-        root.style.setProperty('--score-size', `${scoreSize}px`);
-        guard++;
-
-        if (!fits()) {
-          // 1ステップ分大きくしすぎたので戻して確定
-          timeSize  -= 2;
-          scoreSize -= 1.4;
-          root.style.setProperty('--time-size',  `${timeSize}px`);
-          root.style.setProperty('--score-size', `${scoreSize}px`);
-          break;
-        }
       }
     }
 
@@ -1038,13 +1022,11 @@
     }
 
     function updateExtensionIndicators() {
-      // 拡張OFF時はバッジ自体を消す
       if (!extensionEnabled) {
         if (extAEl) extAEl.style.display = 'none';
         if (extBEl) extBEl.style.display = 'none';
         return;
       } else {
-        // ONに戻したときは style指定を解除し、CSS（shot-mode）に任せる
         if (extAEl) extAEl.style.display = '';
         if (extBEl) extBEl.style.display = '';
       }
@@ -1115,7 +1097,6 @@
     }
 
     function handleShotZero(player) {
-      // ショットモードかつエクステンション有効のときだけ、延長時間へ入る
       if (mode === 'shot' && extensionEnabled) {
         if (player === 'A') {
           if (!extensionUsedA) {
@@ -1141,7 +1122,6 @@
           }
         }
       } else {
-        // 標準モード or エクステンションOFF
         if (player === 'A') extensionActiveA = false;
         if (player === 'B') extensionActiveB = false;
         playShotEndBeep();
@@ -1485,8 +1465,6 @@
     if (extensionEnabledToggle) {
       extensionEnabledToggle.addEventListener('change', () => {
         extensionEnabled = extensionEnabledToggle.checked;
-
-        // OFFにした瞬間にエクステ状態はリセットしておく
         if (!extensionEnabled) {
           extensionUsedA = false;
           extensionUsedB = false;
