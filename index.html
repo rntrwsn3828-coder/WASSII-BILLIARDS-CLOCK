@@ -41,6 +41,7 @@
 
     .app {
       min-height: 100vh;
+      min-height: 100dvh;  /* 対応ブラウザでは実表示高さに追従 */
       width: 100%;
       margin: 0;
       padding: 8px;
@@ -939,18 +940,24 @@
     function resizeFonts() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const base = Math.min(w, h);
+      const shortSide = Math.min(w, h);   // 画面の短い辺
+      const labelSize = Math.max(11, shortSide * 0.018);
 
-      let timeSize, scoreSize;
-      const labelSize = Math.max(11, base * 0.018);
+      let timeSize;
+      let scoreSize;
 
-      if (base <= 700) {
-        // スマホ時は少し小さめにして縦を節約
-        timeSize  = Math.max(40, base * 0.26);
-        scoreSize = Math.max(32, base * 0.20);
+      if (h <= 520) {
+        // 高さがかなり低い（スマホ横など）のときだけ強めに縮小
+        timeSize  = Math.max(36, shortSide * 0.22);
+        scoreSize = Math.max(28, shortSide * 0.16);
+      } else if (shortSide <= 700) {
+        // スマホ縦・小さめタブレット：以前に近いサイズ
+        timeSize  = Math.max(40, shortSide * 0.30);
+        scoreSize = Math.max(32, shortSide * 0.22);
       } else {
-        timeSize  = Math.max(48, base * 0.30);
-        scoreSize = Math.max(36, base * 0.30);
+        // 大きめタブレット・PC
+        timeSize  = Math.max(48, shortSide * 0.30);
+        scoreSize = Math.max(36, shortSide * 0.30);
       }
 
       document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
@@ -1442,8 +1449,14 @@
 
     window.addEventListener('resize', resizeFonts);
     window.addEventListener('orientationchange', resizeFonts);
-    window.addEventListener('load', resizeFonts);
 
+    // load 時に2回再計算（初期＋アドレスバー変化対策）
+    window.addEventListener('load', () => {
+      resizeFonts();
+      setTimeout(resizeFonts, 300);
+    });
+
+    // 初期化
     updateMinutesDisplay();
     resetAll();
     resizeFonts();
