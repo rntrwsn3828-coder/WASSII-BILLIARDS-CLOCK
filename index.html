@@ -807,7 +807,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.5';
+    const APP_VERSION = 'v0.9.6';
 
     // 汎用 clamp
     function clamp(value, min, max) {
@@ -1304,7 +1304,6 @@ document.addEventListener('visibilitychange', () => {
 
     function resetAll() {
       clearTimer();
-      releaseWakeLock();
 
       scoreA = 0;
       scoreB = 0;
@@ -1607,7 +1606,7 @@ document.addEventListener('visibilitychange', () => {
         pauseBtn.textContent = '再開';
         pauseBtn.classList.remove('running');
         pauseBtn.classList.add('paused');
-        releaseWakeLock();
+  
       } else {
         isPaused = false;
         pauseBtn.textContent = '一時停止';
@@ -1658,4 +1657,5 @@ document.addEventListener('visibilitychange', () => {
   </script>
 </body>
 </html>
+
 
