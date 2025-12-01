@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wassii-billiard-clock-v1';
+const CACHE_NAME = 'wassii-billiard-clock-v2';
 const ASSETS = [
   './',
   './index.html',
