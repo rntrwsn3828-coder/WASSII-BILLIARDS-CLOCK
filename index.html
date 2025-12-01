@@ -42,6 +42,11 @@
       overflow-x: hidden;
     }
 
+    /* ブラウザタブで開いているときにだけ付けるクラス */
+    body.browser-mode {
+      min-height: 120vh;  /* 少しだけ縦長にしてアドレスバー非表示を誘発 */
+    }
+
     .app {
       min-height: 100vh;
       min-height: 100dvh;
@@ -809,9 +814,17 @@
   <script>
     const APP_VERSION = 'v0.9.6';
 
-    // 汎用 clamp
+    // 共通 clamp
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
+    }
+
+    // PWA（standalone）かどうか判定
+    function isStandaloneMode() {
+      const mq = window.matchMedia && window.matchMedia('(display-mode: standalone)');
+      const isStandaloneMedia = mq ? mq.matches : false;
+      const isIOSStandalone = window.navigator.standalone === true;
+      return isStandaloneMedia || isIOSStandalone;
     }
 
     let initialMinutesA = 20;
@@ -907,63 +920,61 @@
 
     let audioCtx = null;
 
-// Wake Lock 用
-let wakeLock = null;
+    // ===== Wake Lock 用 =====
+    let wakeLock = null;
 
-async function requestWakeLock() {
-  // 対応していないブラウザの場合は何もしない
-  if (!('wakeLock' in navigator)) {
-    console.log('[WakeLock] not supported on this browser.');
-    return;
-  }
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        console.log('[WakeLock] not supported on this browser.');
+        return;
+      }
 
-  // すでに取得済みなら何もしない
-  if (wakeLock) {
-    return;
-  }
+      if (wakeLock) {
+        return;
+      }
 
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    console.log('[WakeLock] acquired.');
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] acquired.');
 
-    // システム側の理由で解放されたとき
-    wakeLock.addEventListener('release', () => {
-      console.log('[WakeLock] released.');
-      wakeLock = null;
+        wakeLock.addEventListener('release', () => {
+          console.log('[WakeLock] released.');
+          wakeLock = null;
 
-      // 画面が見えていて、タイマーが動いている状態なら取り直す
-      if (!document.hidden && !gameOver && !isPaused && activePlayer !== null) {
-        requestWakeLock();
+          // 解放されたが、まだ試合中で画面が見えていれば再度取りにいく
+          if (!document.hidden && !gameOver && !isPaused && activePlayer !== null) {
+            requestWakeLock();
+          }
+        });
+      } catch (e) {
+        console.warn('[WakeLock] error:', e);
+        wakeLock = null;
+      }
+    }
+
+    async function releaseWakeLock() {
+      if (!wakeLock) return;
+      try {
+        await wakeLock.release();
+        wakeLock = null;
+        console.log('[WakeLock] manually released.');
+      } catch (e) {
+        console.warn('[WakeLock] release error:', e);
+      }
+    }
+
+    // タブの可視状態が変わったとき
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (!gameOver && !isPaused && activePlayer !== null) {
+          requestWakeLock();
+        }
+      } else {
+        releaseWakeLock();
       }
     });
-  } catch (e) {
-    console.warn('[WakeLock] error:', e);
-    wakeLock = null;
-  }
-}
 
-async function releaseWakeLock() {
-  if (!wakeLock) return;
-  try {
-    await wakeLock.release();
-    wakeLock = null;
-    console.log('[WakeLock] manually released.');
-  } catch (e) {
-    console.warn('[WakeLock] release error:', e);
-  }
-}
-
-// タブが見えなくなったら一旦解放、戻ったら必要なときだけ取り直し
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    if (!gameOver && !isPaused && activePlayer !== null) {
-      requestWakeLock();
-    }
-  } else {
-    releaseWakeLock();
-  }
-});
-
+    // ===== オーディオ =====
     function ensureAudioCtx() {
       try {
         if (!audioCtx) {
@@ -1118,6 +1129,7 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
+    // ===== 表示更新系 =====
     function formatTime(sec) {
       const s = Math.max(0, sec);
       const m = Math.floor(s / 60);
@@ -1189,6 +1201,7 @@ document.addEventListener('visibilitychange', () => {
       updateExtensionIndicators();
     }
 
+    // ===== タイマー系 =====
     function handleShotClockBeep(shotTime) {
       if (!soundEnabled) return;
 
@@ -1425,6 +1438,7 @@ document.addEventListener('visibilitychange', () => {
       });
     });
 
+    // ===== 設定操作系 =====
     function updateMinutesDisplay() {
       minutesDisplayAEl.textContent = initialMinutesA.toString();
       minutesDisplayBEl.textContent = initialMinutesB.toString();
@@ -1606,7 +1620,7 @@ document.addEventListener('visibilitychange', () => {
         pauseBtn.textContent = '再開';
         pauseBtn.classList.remove('running');
         pauseBtn.classList.add('paused');
-  
+        // Wake Lock は維持（試合中タブとして置いてある前提）
       } else {
         isPaused = false;
         pauseBtn.textContent = '一時停止';
@@ -1643,6 +1657,18 @@ document.addEventListener('visibilitychange', () => {
       resetAll();
       updateOrientationUI();
       setTimeout(updateOrientationUI, 300);
+
+      // ブラウザタブで開いているときだけ、アドレスバーを隠しやすくする
+      if (!isStandaloneMode()) {
+        document.body.classList.add('browser-mode');
+        setTimeout(() => {
+          try {
+            window.scrollTo(0, 1);
+          } catch (e) {
+            console.log('scrollTo error:', e);
+          }
+        }, 400);
+      }
     });
 
     if ('serviceWorker' in navigator) {
@@ -1657,5 +1683,3 @@ document.addEventListener('visibilitychange', () => {
   </script>
 </body>
 </html>
-
-
