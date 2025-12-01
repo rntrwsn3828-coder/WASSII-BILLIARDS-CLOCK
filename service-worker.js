@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wassii-billiard-clock-v3.4';  // ★バージョンを上げる
+const CACHE_NAME = 'wassii-billiard-clock-v3.5';  // ★バージョンを上げる
 const ASSETS = [
   './',
   './index.html',
