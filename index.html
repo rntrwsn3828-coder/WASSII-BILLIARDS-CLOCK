@@ -41,7 +41,7 @@
 
     .app {
       min-height: 100vh;
-      min-height: 100dvh;
+      min-height: 100dvh;  /* 対応ブラウザでは実表示高さに追従 */
       width: 100%;
       margin: 0;
       padding: 8px;
@@ -183,7 +183,7 @@
       padding: 4px 0;
     }
 
-    /* EXTENSION バッジ */
+    /* EXTENSION バッジ（プレイヤーネーム横・緑に光る） */
     .ext-indicator {
       font-size: clamp(0.8rem, 2.4vw, 1.1rem);
       padding: 2px 10px;
@@ -496,6 +496,15 @@
       margin-bottom: 4px;
     }
 
+    .settings-footer {
+      margin-top: 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.75rem;
+      opacity: 0.55;
+      text-align: right;
+    }
+
     /* 幅が狭いデバイス（スマホ）向け調整 */
     @media (max-width: 700px) {
       .app {
@@ -520,7 +529,7 @@
       }
     }
 
-    /* 高さが低い端末向け：余白圧縮＋モーダルを上寄せに */
+    /* 高さが低い端末向け：余白を圧縮して見切れ防止 */
     @media (max-height: 720px) {
       .app {
         padding-top: 4px;
@@ -749,10 +758,15 @@
         </div>
 
       </div>
+      <div class="settings-footer">
+        Version <span id="appVersion"></span>
+      </div>
     </div>
   </div>
 
   <script>
+    const APP_VERSION = 'v0.9.0';
+
     let initialMinutesA = 20;
     let initialMinutesB = 20;
 
@@ -775,6 +789,9 @@
     let isPaused = false;
 
     let soundEnabled = true;
+
+    // 直前の画面の向き
+    let lastOrientation = null;
 
     // モード: 'standard' = 持ち時間あり, 'shot' = 最初からショットクロックのみ
     let mode = 'standard';
@@ -961,39 +978,45 @@
       }
     }
 
-    // ==== フォント自動調整：大きめから「はみ出す分だけ」縮める ====
+    // ==== フォント自動調整 ====
     function resizeFonts() {
       const root = document.documentElement;
-      const app = document.querySelector('.app');
+      const app  = document.querySelector('.app');
       if (!app) return;
 
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const shortSide = Math.min(w, h);
+      const orientation = w >= h ? 'landscape' : 'portrait';
 
-      // 実際に見えている高さ（アドレスバー等を除外）
       const viewportH = (window.visualViewport && window.visualViewport.height)
         ? window.visualViewport.height
         : window.innerHeight;
 
+      const shortSide = Math.min(w, h);
+
       const labelSize = Math.max(11, shortSide * 0.02);
       root.style.setProperty('--label-size', `${labelSize}px`);
 
-      // 最初は「かなり大きめ」に設定しておいて、下のループで必要に応じて縮める
-      let timeSize, scoreSize;
-      if (shortSide <= 700) {
-        // スマホ〜小型タブレット（横持ち含む）
-        timeSize  = shortSide * 0.38;  // かなり大きく
-        scoreSize = shortSide * 0.24;
-      } else {
-        // 大きめタブレット・PC
-        timeSize  = shortSide * 0.32;
-        scoreSize = shortSide * 0.20;
+      const computed   = getComputedStyle(root);
+      let timeSize  = parseFloat(computed.getPropertyValue('--time-size'))  || 80;
+      let scoreSize = parseFloat(computed.getPropertyValue('--score-size')) || 48;
+
+      const orientationChanged = (lastOrientation !== orientation);
+
+      if (lastOrientation === null || orientationChanged) {
+        if (shortSide <= 700) {
+          timeSize  = shortSide * 0.38;
+          scoreSize = shortSide * 0.24;
+        } else {
+          timeSize  = shortSide * 0.32;
+          scoreSize = shortSide * 0.20;
+        }
+
+        timeSize  = Math.max(40, Math.min(timeSize, 320));
+        scoreSize = Math.max(30, Math.min(scoreSize, 220));
       }
 
-      // 上限・下限
-      timeSize  = Math.max(40, Math.min(timeSize, 320));
-      scoreSize = Math.max(30, Math.min(scoreSize, 220));
+      lastOrientation = orientation;
 
       root.style.setProperty('--time-size',  `${timeSize}px`);
       root.style.setProperty('--score-size', `${scoreSize}px`);
@@ -1003,7 +1026,6 @@
         return rect.bottom <= viewportH - 2;
       };
 
-      // 画面に収まるまで少しずつ縮める
       let guard = 0;
       while (!fits() && guard < 80 && timeSize > 40) {
         timeSize  -= 2;
@@ -1527,6 +1549,9 @@
     window.addEventListener('orientationchange', resizeFonts);
 
     window.addEventListener('load', () => {
+      const verEl = document.getElementById('appVersion');
+      if (verEl) verEl.textContent = APP_VERSION;
+
       resizeFonts();
       setTimeout(resizeFonts, 300);
     });
