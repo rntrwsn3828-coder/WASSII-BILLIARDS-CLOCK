@@ -204,7 +204,7 @@
       letter-spacing: 0.14em;
       text-transform: uppercase;
       box-shadow: 0 0 10px rgba(76, 175, 80, 0.85);
-      display: none;
+      display: inline-flex;   /* ← 常時表示（JS側でON/OFF制御） */
       white-space: nowrap;
     }
 
@@ -237,13 +237,6 @@
         box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
         transform: scale(1);
       }
-    }
-
-    body.shot-mode .ext-indicator {
-      display: inline-flex;
-    }
-    body:not(.shot-mode) .ext-indicator {
-      display: none;
     }
 
     /* TIME/SCORE は JS が設定する CSS変数ベース */
@@ -812,11 +805,21 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.6';
+    const APP_VERSION = 'v0.9.9';
 
     // 共通 clamp
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
+    }
+
+    // TIME表示の横幅フィット用：canvasでテキスト幅を測る
+    let textMeasureCtx = null;
+    function getTextMeasureCtx() {
+      if (!textMeasureCtx) {
+        const canvas = document.createElement('canvas');
+        textMeasureCtx = canvas.getContext('2d');
+      }
+      return textMeasureCtx;
     }
 
     // PWA（standalone）かどうか判定
@@ -919,6 +922,34 @@
     const extensionEnabledToggle = document.getElementById('extensionEnabledToggle');
 
     let audioCtx = null;
+
+    // ===== Speech Synthesis（音声合成） =====
+    let extensionVoice = null;
+
+    function initVoices() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return;
+
+      extensionVoice =
+        voices.find(v => v.lang === 'ja-JP') ||
+        voices.find(v => v.lang && v.lang.startsWith('ja')) ||
+        voices[0];
+    }
+
+    if ('speechSynthesis' in window) {
+      initVoices();
+      window.speechSynthesis.addEventListener('voiceschanged', initVoices);
+
+      // 初回ユーザー操作で resume（モバイルでのブロック対策）
+      document.addEventListener('click', () => {
+        try {
+          window.speechSynthesis.resume();
+        } catch (e) {
+          console.warn('speech resume error:', e);
+        }
+      }, { once: true });
+    }
 
     // ===== Wake Lock 用 =====
     let wakeLock = null;
@@ -1040,9 +1071,23 @@
 
       try {
         const utt = new SpeechSynthesisUtterance('エクステンション');
-        utt.lang = 'ja-JP';
-        utt.rate = 1.1;
+
+        if (extensionVoice) {
+          utt.voice = extensionVoice;
+          utt.lang  = extensionVoice.lang;
+        } else {
+          utt.lang  = 'ja-JP';
+        }
+
+        utt.rate  = 1.05;
         utt.pitch = 1.0;
+
+        try {
+          window.speechSynthesis.cancel();
+        } catch (e) {
+          console.warn('speech cancel error:', e);
+        }
+
         window.speechSynthesis.speak(utt);
       } catch (e) {
         console.warn('speech error:', e);
@@ -1059,7 +1104,7 @@
         ? window.visualViewport.height
         : vh;
 
-      // 横向き前提の図面
+      // 横向き前提の基準値（画面全体スケール用）
       const designW    = 1280;
       const designH    = 800;
       const designTime = 170;
@@ -1076,9 +1121,54 @@
       function applyScale(s) {
         s = clamp(s, MIN_SCALE, MAX_SCALE);
 
-        const timeSize  = clamp(designTime  * s, 40, 260);
-        const scoreSize = clamp(designScore * s, 28, 180);
-        const labelSize = clamp(designLabel * s, 11, 22);
+        const baseTimeSize   = clamp(designTime  * s, 40, 260);
+        let   timeSize       = baseTimeSize;
+        let   scoreSize      = clamp(designScore * s, 28, 180);
+        let   labelSize      = clamp(designLabel * s, 11, 22);
+
+        // 「タップゾーン（.clock）の幅」に合わせて TIME をフィット
+        try {
+          if (clockAEl && timeAEl) {
+            const clockRect      = clockAEl.getBoundingClientRect();
+            const containerWidth = clockRect.width;
+
+            if (containerWidth > 0) {
+              const ctx = getTextMeasureCtx();
+              if (ctx) {
+                const cs         = getComputedStyle(timeAEl);
+                const fontFamily = cs.fontFamily || 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                const fontWeight = cs.fontWeight || '600';
+                const fontStyle  = cs.fontStyle  || 'normal';
+
+                const measureForSize = (sizePx) => {
+                  ctx.font = `${fontStyle} ${fontWeight} ${sizePx}px ${fontFamily}`;
+                  return ctx.measureText('20:00').width;
+                };
+
+                const marginRatio = 0.96;  // タップゾーン幅の96%まで使う
+                const maxWidth    = containerWidth * marginRatio;
+                const widthAtBase = measureForSize(baseTimeSize);
+
+                if (widthAtBase > 0 && maxWidth > 0) {
+                  let ratio = maxWidth / widthAtBase; // >1なら拡大してよい
+
+                  const RATIO_MIN = 0.5;
+                  const RATIO_MAX = 1.6;
+                  ratio = clamp(ratio, RATIO_MIN, RATIO_MAX);
+
+                  timeSize = clamp(baseTimeSize * ratio, 34, 260);
+                  const k  = timeSize / baseTimeSize;
+
+                  scoreSize = clamp(scoreSize * k, 24, 180);
+                  labelSize = clamp(labelSize * k, 10, 22);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('resizeFonts fit error:', e);
+          timeSize  = baseTimeSize;
+        }
 
         root.style.setProperty('--time-size',  `${timeSize}px`);
         root.style.setProperty('--score-size', `${scoreSize}px`);
@@ -1087,18 +1177,16 @@
         return s;
       }
 
-      // 一旦図面通りのスケールで適用
       scale = applyScale(scale);
 
-      // ボトムのボタン列が画面内に収まっているか確認し、
-      // はみ出していればスケールを少し落とす
+      // 下部ボタンがはみ出していたら全体スケールを微調整
       const bottom = document.querySelector('.bottom-controls');
       if (bottom) {
         const rect = bottom.getBoundingClientRect();
         const bottomY = rect.bottom;
 
         if (bottomY > vvh) {
-          const ratio = vvh / bottomY;
+          const ratio    = vvh / bottomY;
           const newScale = scale * ratio * 0.98;
           applyScale(newScale);
         }
@@ -1143,8 +1231,8 @@
         if (extBEl) extBEl.style.display = 'none';
         return;
       } else {
-        if (extAEl) extAEl.style.display = '';
-        if (extBEl) extBEl.style.display = '';
+        if (extAEl) extAEl.style.display = 'inline-flex';
+        if (extBEl) extBEl.style.display = 'inline-flex';
       }
 
       if (extAEl) {
@@ -1214,7 +1302,8 @@
     }
 
     function handleShotZero(player) {
-      if (mode === 'shot' && extensionEnabled) {
+      // 設定でエクステンションONのときだけ、モード問わずエクステンション処理
+      if (extensionEnabled) {
         if (player === 'A') {
           if (!extensionUsedA) {
             extensionUsedA = true;
@@ -1404,7 +1493,8 @@
       if (total > maxTotalScore) {
         maxTotalScore = total;
 
-        if (mode === 'shot') {
+        // エクステンションが有効な場合は、モードに関係なく「新ラック」で1回ぶんリセット
+        if (extensionEnabled) {
           extensionUsedA = false;
           extensionUsedB = false;
           extensionActiveA = false;
@@ -1620,7 +1710,7 @@
         pauseBtn.textContent = '再開';
         pauseBtn.classList.remove('running');
         pauseBtn.classList.add('paused');
-        // Wake Lock は維持（試合中タブとして置いてある前提）
+        // Wake Lock は維持
       } else {
         isPaused = false;
         pauseBtn.textContent = '一時停止';
