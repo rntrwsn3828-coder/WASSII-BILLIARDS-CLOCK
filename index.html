@@ -184,17 +184,17 @@
 
     /* EXTENSION バッジ（プレイヤーネーム横・緑に光る） */
     .ext-indicator {
-      font-size: clamp(0.9rem, 3vw, 1.3rem);
-      padding: 4px 14px;
+      font-size: clamp(0.8rem, 2.4vw, 1.1rem);
+      padding: 2px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(76, 175, 80, 0.95);
+      border: 1px solid rgba(76, 175, 80, 0.9);
       background: radial-gradient(circle at top,
                   rgba(76, 175, 80, 0.45),
                   rgba(0, 0, 0, 0.2));
       color: #c8ffcc;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      box-shadow: 0 0 14px rgba(76, 175, 80, 0.9);
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.85);
       display: none;
       white-space: nowrap;
     }
@@ -493,12 +493,69 @@
       margin-bottom: 4px;
     }
 
+    /* 幅が狭いデバイス（スマホ）向け調整 */
     @media (max-width: 700px) {
-      .app { padding: 6px; }
-      .clocks { flex-direction: column; }
-      .clock { min-height: 34vh; }
-      .buttons-row { gap: 6px; }
-      .btn-main { font-size: 0.9rem; }
+      .app {
+        padding: 6px;
+      }
+
+      .clocks {
+        flex-direction: column;
+      }
+
+      .clock {
+        min-height: 30vh;
+        padding: 6px;
+      }
+
+      .buttons-row {
+        gap: 6px;
+      }
+
+      .btn-main {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* 高さが低い端末向け：余白を圧縮して見切れ防止 */
+    @media (max-height: 720px) {
+      .app {
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      .clocks {
+        gap: 4px;
+      }
+
+      .clock {
+        min-height: 28vh;
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      .time-block {
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      .score-block .field-caption {
+        margin-bottom: 0;
+      }
+
+      .bottom-controls {
+        margin-top: 0;
+      }
+
+      .buttons-row {
+        gap: 4px;
+      }
+
+      .ext-indicator {
+        font-size: 0.75rem;
+        padding: 1px 8px;
+        letter-spacing: 0.10em;
+      }
     }
   </style>
 </head>
@@ -888,8 +945,9 @@
       const labelSize = Math.max(11, base * 0.018);
 
       if (base <= 700) {
-        timeSize  = Math.max(40, base * 0.3);
-        scoreSize = Math.max(32, base * 0.26);
+        // スマホ時は少し小さめにして縦を節約
+        timeSize  = Math.max(40, base * 0.26);
+        scoreSize = Math.max(32, base * 0.20);
       } else {
         timeSize  = Math.max(48, base * 0.30);
         scoreSize = Math.max(36, base * 0.30);
