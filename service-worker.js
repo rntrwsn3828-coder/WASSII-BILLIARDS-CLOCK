@@ -1,54 +1,1404 @@
-const CACHE_NAME = 'wassii-billiard-clock-v2.1';  // ★バージョンを上げる
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
-];
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>WASSII BILLIARD CLOCK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-// インストール時にキャッシュして、すぐ新SWに切り替え
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();   // ★待たずにこのSWを有効にする
-});
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="manifest.webmanifest">
 
-// 古いキャッシュ削除＋すぐにクライアント支配
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();  // ★今開いているタブ／PWAにも即反映
-});
+  <style>
+    :root {
+      --bg: #101010;
+      --panel: #202020;
+      --panel-active: #2d4a2d;
+      --panel-finished: #4a2020;
+      --text-main: #f5f5f5;
+      --accent: #3fa34d;
+      --danger: #c0392b;
+      --overtime: #aa6f00;
+      --time-size: 80px;
+      --score-size: 48px;
+      --label-size: 14px;
+    }
 
-// fetch ハンドラ
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
+    * { box-sizing: border-box; }
 
-  // HTML（ナビゲーション）は「ネットワーク優先 + キャッシュfallback」
-  if (req.mode === 'navigate' || req.destination === 'document') {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req))  // オフライン時はキャッシュ
-    );
-    return;
-  }
+    html { height: 100%; }
 
-  // それ以外のアイコン等はこれまで通り「キャッシュ優先」
-  event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req))
-  );
-});
+    body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+               env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    }
+
+    .app {
+      min-height: 100vh;
+      width: 100%;
+      margin: 0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: radial-gradient(circle at top, #222 0, #000 55%, #000 100%);
+    }
+
+    .main {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .clocks {
+      flex: 1 1 auto;
+      display: flex;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .clock {
+      flex: 1 1 0;
+      background: #111;
+      border-radius: 16px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow:
+        0 0 0 2px #000,
+        0 10px 26px rgba(0, 0, 0, 0.85);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      transition:
+        background 0.15s ease-out,
+        box-shadow 0.15s ease-out,
+        transform 0.06s ease-out;
+    }
+
+    .clock::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 60%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease-out;
+    }
+
+    .clock.active {
+      background: var(--panel-active);
+      box-shadow:
+        0 0 0 2px #4caf50,
+        0 0 28px rgba(76, 175, 80, 0.7);
+    }
+
+    .clock.active::before { opacity: 0.4; }
+
+    .clock.finished {
+      background: var(--panel-finished);
+      box-shadow:
+        0 0 0 2px #e74c3c,
+        0 0 28px rgba(231, 76, 60, 0.7);
+    }
+
+    .clock.finished::before { opacity: 0.3; }
+
+    .clock.finished .time { color: var(--danger); }
+
+    .clock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .player-label {
+      font-size: clamp(1rem, 2.7vw, 1.4rem);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-label[contenteditable="true"] { cursor: text; }
+
+    .turn-indicator {
+      font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .turn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #777;
+    }
+
+    .clock.active .turn-dot { background: #7fff7f; }
+    .clock.finished .turn-dot { background: #ff6b6b; }
+
+    .time-block {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+      padding: 4px 0;
+    }
+
+    /* EXTENSION バッジ（プレイヤーネーム横・緑に光る） */
+    .ext-indicator {
+      font-size: clamp(0.9rem, 3vw, 1.3rem);
+      padding: 4px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(76, 175, 80, 0.95);
+      background: radial-gradient(circle at top,
+                  rgba(76, 175, 80, 0.45),
+                  rgba(0, 0, 0, 0.2));
+      color: #c8ffcc;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      box-shadow: 0 0 14px rgba(76, 175, 80, 0.9);
+      display: none;
+      white-space: nowrap;
+    }
+
+    .ext-indicator.used {
+      opacity: 0.35;
+      text-decoration: line-through;
+      background: rgba(120, 120, 120, 0.6);
+      border-color: rgba(200, 200, 200, 0.8);
+      color: #cccccc;
+      box-shadow: none;
+    }
+
+    .ext-indicator.blink {
+      animation: extBlink 0.8s ease-in-out infinite;
+    }
+
+    @keyframes extBlink {
+      0% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        box-shadow: 0 0 22px rgba(144, 238, 144, 1);
+        transform: scale(1.06);
+      }
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
+        transform: scale(1);
+      }
+    }
+
+    body.shot-mode .ext-indicator {
+      display: inline-flex;
+    }
+    body:not(.shot-mode) .ext-indicator {
+      display: none;
+    }
+
+    .time {
+      font-size: var(--time-size);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      text-shadow:
+        0 0 10px rgba(0, 0, 0, 0.9),
+        0 0 24px rgba(0, 0, 0, 0.95);
+    }
+
+    .time.overtime { color: var(--overtime); }
+
+    .field-caption {
+      font-size: var(--label-size);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .score {
+      font-size: var(--score-size);
+      min-width: 2.4em;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .score-hit {
+      animation: scoreHit 0.28s ease-out;
+    }
+
+    @keyframes scoreHit {
+      0%   { transform: scale(1);   color: var(--text-main); text-shadow: none; }
+      40%  { transform: scale(1.35); color: var(--accent); text-shadow: 0 0 10px rgba(63, 163, 77, 0.9); }
+      100% { transform: scale(1);   color: var(--text-main); text-shadow: none; }
+    }
+
+    .score-btn {
+      font-size: clamp(2.0rem, 3.6vw, 2.6rem);
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #333;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+      min-width: 56px;
+      min-height: 56px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.7);
+    }
+
+    .score-btn:active {
+      transform: scale(0.95);
+      background: #444;
+    }
+
+    .bottom-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .buttons-row {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+    }
+
+    .btn-main {
+      flex: 1;
+      font-size: 1.0rem;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #pauseBtn { background: #555; color: #fff; }
+    #pauseBtn.running { background: #c0392b; }
+    #pauseBtn.paused  { background: #2e7d32; }
+
+    #pauseBtn:active {
+      transform: scale(0.97);
+      filter: brightness(1.1);
+    }
+
+    #resetBtn { background: #444; color: #fff; }
+
+    #resetBtn:active {
+      transform: scale(0.97);
+      filter: brightness(1.1);
+    }
+
+    .btn-settings-main {
+      background: #333;
+      color: #f5f5f5;
+    }
+
+    .btn-settings-main:active {
+      transform: scale(0.97);
+      filter: brightness(1.1);
+    }
+
+    .settings-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
+
+    .settings-modal-backdrop.open { display: flex; }
+
+    .settings-modal {
+      max-width: 420px;
+      width: 100%;
+      background: #181818;
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow:
+        0 0 0 1px #000,
+        0 16px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .settings-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .settings-close {
+      border: none;
+      background: transparent;
+      color: #aaa;
+      font-size: 1.4rem;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .settings-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+
+    .settings-label {
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .settings-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .settings-toggle input[type="checkbox"] {
+      width: 36px;
+      height: 18px;
+    }
+
+    .shot-settings {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .shot-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .shot-row-label {
+      font-size: 0.85rem;
+    }
+
+    .shot-row-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .shot-display {
+      min-width: 2.4em;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .shot-btn {
+      font-size: 1rem;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: none;
+      background: #333;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .shot-btn:active {
+      transform: scale(0.96);
+      background: #444;
+    }
+
+    .modal-section {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-section-title {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 700px) {
+      .app { padding: 6px; }
+      .clocks { flex-direction: column; }
+      .clock { min-height: 34vh; }
+      .buttons-row { gap: 6px; }
+      .btn-main { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="main">
+      <section class="clocks">
+        <div class="clock" data-player="A" id="clockA">
+          <div class="clock-header">
+            <div class="header-left">
+              <div class="player-label" contenteditable="true">PLAYER 1</div>
+              <div class="ext-indicator" id="extA">EXTENSION</div>
+            </div>
+            <div class="turn-indicator">
+              <span class="turn-dot"></span>
+              <span>TURN</span>
+            </div>
+          </div>
+          <div class="time-block">
+            <div class="time" id="timeA">20:00</div>
+          </div>
+
+          <div class="score-block">
+            <div class="field-caption">SCORE</div>
+            <div class="score-row">
+              <button class="score-btn" data-player="A" data-delta="-1">-</button>
+              <div class="score" id="scoreA">0</div>
+              <button class="score-btn" data-player="A" data-delta="1">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="clock" data-player="B" id="clockB">
+          <div class="clock-header">
+            <div class="header-left">
+              <div class="player-label" contenteditable="true">PLAYER 2</div>
+              <div class="ext-indicator" id="extB">EXTENSION</div>
+            </div>
+            <div class="turn-indicator">
+              <span class="turn-dot"></span>
+              <span>TURN</span>
+            </div>
+          </div>
+          <div class="time-block">
+            <div class="time" id="timeB">20:00</div>
+          </div>
+
+          <div class="score-block">
+            <div class="field-caption">SCORE</div>
+            <div class="score-row">
+              <button class="score-btn" data-player="B" data-delta="-1">-</button>
+              <div class="score" id="scoreB">0</div>
+              <button class="score-btn" data-player="B" data-delta="1">+</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bottom-controls">
+        <div class="buttons-row">
+          <button id="pauseBtn" class="btn-main">一時停止</button>
+          <button id="settingsBtn" class="btn-main btn-settings-main">設定</button>
+          <button id="resetBtn" class="btn-main">リセット</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 設定モーダル -->
+  <div class="settings-modal-backdrop" id="settingsModal">
+    <div class="settings-modal">
+      <div class="settings-header">
+        <div class="settings-title">SETTINGS</div>
+        <button class="settings-close" id="settingsCloseBtn">&times;</button>
+      </div>
+      <div class="settings-content">
+
+        <!-- モード切り替え -->
+        <div class="settings-row">
+          <div class="settings-label">モード</div>
+          <div class="settings-toggle">
+            <label>
+              <input type="radio" name="modeSelect" id="modeStandard" value="standard" checked>
+              通常
+            </label>
+            <label>
+              <input type="radio" name="modeSelect" id="modeShotOnly" value="shot">
+              ショットクロック
+            </label>
+          </div>
+        </div>
+
+        <!-- サウンド -->
+        <div class="settings-row">
+          <div class="settings-label">サウンド</div>
+          <div class="settings-toggle">
+            <label>
+              <input type="checkbox" id="soundToggle" checked>
+              有効
+            </label>
+          </div>
+        </div>
+
+        <!-- ショットクロック -->
+        <div class="settings-row">
+          <div class="settings-label">ショットクロック（秒）</div>
+          <div class="shot-settings">
+            <div class="shot-row">
+              <span class="shot-row-label">1P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="shotMinusA">-</button>
+                <span class="shot-display" id="shotDisplayA">30</span>
+                <button class="shot-btn" id="shotPlusA">+</button>
+              </div>
+            </div>
+            <div class="shot-row">
+              <span class="shot-row-label">2P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="shotMinusB">-</button>
+                <span class="shot-display" id="shotDisplayB">30</span>
+                <button class="shot-btn" id="shotPlusB">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- エクステンション -->
+        <div class="modal-section">
+          <div class="modal-section-title">エクステンション（秒）</div>
+          <div class="shot-settings">
+            <div class="shot-row">
+              <span class="shot-row-label">1P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="extMinusA">-</button>
+                <span class="shot-display" id="extDisplayA">30</span>
+                <button class="shot-btn" id="extPlusA">+</button>
+              </div>
+            </div>
+            <div class="shot-row">
+              <span class="shot-row-label">2P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="extMinusB">-</button>
+                <span class="shot-display" id="extDisplayB">30</span>
+                <button class="shot-btn" id="extPlusB">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 持ち時間 -->
+        <div class="modal-section">
+          <div class="modal-section-title">持ち時間（分）</div>
+          <div class="shot-settings">
+            <div class="shot-row">
+              <span class="shot-row-label">1P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="minutesMinusA">-</button>
+                <span class="shot-display" id="minutesDisplayA">20</span>
+                <button class="shot-btn" id="minutesPlusA">+</button>
+              </div>
+            </div>
+            <div class="shot-row">
+              <span class="shot-row-label">2P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="minutesMinusB">-</button>
+                <span class="shot-display" id="minutesDisplayB">20</span>
+                <button class="shot-btn" id="minutesPlusB">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let initialMinutesA = 20;
+    let initialMinutesB = 20;
+
+    let timeA = initialMinutesA * 60;
+    let timeB = initialMinutesB * 60;
+    let scoreA = 0;
+    let scoreB = 0;
+
+    let overtimeSecondsA = 30;
+    let overtimeSecondsB = 30;
+    let shotTimeA = overtimeSecondsA;
+    let shotTimeB = overtimeSecondsB;
+
+    let overtimeA = false;
+    let overtimeB = false;
+
+    let activePlayer = null;
+    let timerId = null;
+    let gameOver = false;
+    let isPaused = false;
+
+    let soundEnabled = true;
+
+    // モード: 'standard' = 持ち時間あり, 'shot' = 最初からショットクロックのみ
+    let mode = 'standard';
+
+    // エクステンション秒数（1P / 2P 個別）
+    let extensionSecondsA = 30;
+    let extensionSecondsB = 30;
+
+    // エクステンション使用フラグ（各プレイヤー1回／ラックごと）
+    let extensionUsedA = false;
+    let extensionUsedB = false;
+
+    // 現在エクステンション時間中かどうか（点滅用）
+    let extensionActiveA = false;
+    let extensionActiveB = false;
+
+    // 合計スコアの最大値（これが増えた瞬間を「新ラック開始」とみなす）
+    let maxTotalScore = 0;
+
+    const timeAEl = document.getElementById('timeA');
+    const timeBEl = document.getElementById('timeB');
+    const scoreAEl = document.getElementById('scoreA');
+    const scoreBEl = document.getElementById('scoreB');
+    const clockAEl = document.getElementById('clockA');
+    const clockBEl = document.getElementById('clockB');
+
+    const extAEl = document.getElementById('extA');
+    const extBEl = document.getElementById('extB');
+
+    const minutesDisplayAEl = document.getElementById('minutesDisplayA');
+    const minutesDisplayBEl = document.getElementById('minutesDisplayB');
+
+    const shotDisplayAEl = document.getElementById('shotDisplayA');
+    const shotDisplayBEl = document.getElementById('shotDisplayB');
+
+    const extDisplayAEl = document.getElementById('extDisplayA');
+    const extDisplayBEl = document.getElementById('extDisplayB');
+
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    const soundToggle = document.getElementById('soundToggle');
+
+    const shotPlusAEl = document.getElementById('shotPlusA');
+    const shotMinusAEl = document.getElementById('shotMinusA');
+    const shotPlusBEl = document.getElementById('shotPlusB');
+    const shotMinusBEl = document.getElementById('shotMinusB');
+
+    const extPlusAEl  = document.getElementById('extPlusA');
+    const extMinusAEl = document.getElementById('extMinusA');
+    const extPlusBEl  = document.getElementById('extPlusB');
+    const extMinusBEl = document.getElementById('extMinusB');
+
+    const minutesPlusAEl = document.getElementById('minutesPlusA');
+    const minutesMinusAEl = document.getElementById('minutesMinusA');
+    const minutesPlusBEl = document.getElementById('minutesPlusB');
+    const minutesMinusBEl = document.getElementById('minutesMinusB');
+
+    const modeStandardEl = document.getElementById('modeStandard');
+    const modeShotOnlyEl = document.getElementById('modeShotOnly');
+
+    let audioCtx = null;
+
+    // Wake Lock 用
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+        }
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+        });
+      } catch (e) {
+        console.warn('wakeLock error:', e);
+        wakeLock = null;
+      }
+    }
+
+    async function releaseWakeLock() {
+      try {
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+        }
+      } catch (e) {
+        console.warn('wakeLock release error:', e);
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (!gameOver && !isPaused && activePlayer !== null) {
+          requestWakeLock();
+        }
+      } else {
+        releaseWakeLock();
+      }
+    });
+
+    function ensureAudioCtx() {
+      try {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) {
+            audioCtx = new AC();
+          }
+        } else if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {
+        console.warn("audioCtx error:", e);
+      }
+    }
+
+    function playBeep(freq = 1000, duration = 0.12, type = 'square', volume = 0.25) {
+      if (!soundEnabled) return;
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      ensureAudioCtx();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+      osc.start(now);
+      osc.stop(now + duration);
+
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + duration);
+    }
+
+    function playShotWarningBeep() {
+      playBeep(900, 0.12, 'square', 0.25);
+    }
+
+    function playShotEndBeep() {
+      playBeep(600, 0.8, 'sawtooth', 0.3);
+    }
+
+    function playOvertimeStartBeep() {
+      if (!soundEnabled) return;
+
+      const delays = [0, 150, 300];
+
+      delays.forEach((d) => {
+        setTimeout(() => {
+          playBeep(900, 0.10, 'square', 0.25);
+        }, d);
+      });
+    }
+
+    function speakExtension() {
+      if (!soundEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+
+      try {
+        const utt = new SpeechSynthesisUtterance('エクステンション');
+        utt.lang = 'ja-JP';
+        utt.rate = 1.1;
+        utt.pitch = 1.0;
+        window.speechSynthesis.speak(utt);
+      } catch (e) {
+        console.warn('speech error:', e);
+      }
+    }
+
+    function resizeFonts() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const base = Math.min(w, h);
+
+      let timeSize, scoreSize;
+      const labelSize = Math.max(11, base * 0.018);
+
+      if (base <= 700) {
+        timeSize  = Math.max(40, base * 0.3);
+        scoreSize = Math.max(32, base * 0.26);
+      } else {
+        timeSize  = Math.max(48, base * 0.30);
+        scoreSize = Math.max(36, base * 0.30);
+      }
+
+      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
+      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
+      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, sec);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function updateExtensionIndicators() {
+      if (extAEl) {
+        const usedButNotActiveA = extensionUsedA && !extensionActiveA;
+        extAEl.classList.toggle('used', usedButNotActiveA);
+        extAEl.classList.toggle('blink', extensionActiveA);
+      }
+      if (extBEl) {
+        const usedButNotActiveB = extensionUsedB && !extensionActiveB;
+        extBEl.classList.toggle('used', usedButNotActiveB);
+        extBEl.classList.toggle('blink', extensionActiveB);
+      }
+    }
+
+    function updateDisplays() {
+      document.body.classList.toggle('shot-mode', mode === 'shot');
+
+      const displayA = overtimeA ? shotTimeA : timeA;
+      const displayB = overtimeB ? shotTimeB : timeB;
+
+      timeAEl.textContent = formatTime(displayA);
+      timeBEl.textContent = formatTime(displayB);
+
+      scoreAEl.textContent = scoreA.toString();
+      scoreBEl.textContent = scoreB.toString();
+
+      const finishedA = (!overtimeA && timeA === 0) || (overtimeA && shotTimeA === 0);
+      const finishedB = (!overtimeB && timeB === 0) || (overtimeB && shotTimeB === 0);
+
+      const isOvertimeDisplayA = overtimeA && !finishedA;
+      const isOvertimeDisplayB = overtimeB && !finishedB;
+
+      timeAEl.classList.toggle('overtime', isOvertimeDisplayA);
+      timeBEl.classList.toggle('overtime', isOvertimeDisplayB);
+
+      clockAEl.classList.toggle('finished', finishedA);
+      clockBEl.classList.toggle('finished', finishedB);
+
+      clockAEl.classList.remove('active');
+      clockBEl.classList.remove('active');
+      if (!gameOver) {
+        if (activePlayer === 'A') clockAEl.classList.add('active');
+        else if (activePlayer === 'B') clockBEl.classList.add('active');
+      }
+
+      minutesDisplayAEl.textContent = initialMinutesA.toString();
+      minutesDisplayBEl.textContent = initialMinutesB.toString();
+      shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      shotDisplayBEl.textContent = overtimeSecondsB.toString();
+
+      if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+
+      updateExtensionIndicators();
+    }
+
+    function handleShotClockBeep(shotTime) {
+      if (!soundEnabled) return;
+
+      if (shotTime === 15) {
+        playShotWarningBeep();
+      }
+      if (shotTime <= 5 && shotTime > 0) {
+        playShotWarningBeep();
+      }
+    }
+
+    function handleShotZero(player) {
+      if (mode === 'shot') {
+        if (player === 'A') {
+          if (!extensionUsedA) {
+            extensionUsedA = true;
+            extensionActiveA = true;
+            shotTimeA = extensionSecondsA;
+            playOvertimeStartBeep();
+            speakExtension();
+          } else {
+            extensionActiveA = false;
+            playShotEndBeep();
+          }
+        } else {
+          if (!extensionUsedB) {
+            extensionUsedB = true;
+            extensionActiveB = true;
+            shotTimeB = extensionSecondsB;
+            playOvertimeStartBeep();
+            speakExtension();
+          } else {
+            extensionActiveB = false;
+            playShotEndBeep();
+          }
+        }
+      } else {
+        playShotEndBeep();
+      }
+
+      updateExtensionIndicators();
+    }
+
+    function clearTimer() {
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function startTimerLoop() {
+      clearTimer();
+      if (!activePlayer || gameOver || isPaused) return;
+
+      requestWakeLock();
+
+      pauseBtn.classList.add('running');
+      pauseBtn.classList.remove('paused');
+
+      timerId = setInterval(() => {
+        if (gameOver || !activePlayer || isPaused) {
+          clearTimer();
+          return;
+        }
+
+        if (activePlayer === 'A') {
+          if (!overtimeA) {
+            if (timeA > 0) {
+              timeA--;
+              if (timeA <= 0) {
+                timeA = 0;
+                overtimeA = true;
+                shotTimeA = overtimeSecondsA;
+                playOvertimeStartBeep();
+              }
+            }
+          } else {
+            if (shotTimeA > 0) {
+              shotTimeA--;
+              handleShotClockBeep(shotTimeA);
+              if (shotTimeA === 0) {
+                handleShotZero('A');
+              }
+            }
+          }
+        } else if (activePlayer === 'B') {
+          if (!overtimeB) {
+            if (timeB > 0) {
+              timeB--;
+              if (timeB <= 0) {
+                timeB = 0;
+                overtimeB = true;
+                shotTimeB = overtimeSecondsB;
+                playOvertimeStartBeep();
+              }
+            }
+          } else {
+            if (shotTimeB > 0) {
+              shotTimeB--;
+              handleShotClockBeep(shotTimeB);
+              if (shotTimeB === 0) {
+                handleShotZero('B');
+              }
+            }
+          }
+        }
+
+        updateDisplays();
+      }, 1000);
+    }
+
+    function resetAll() {
+      clearTimer();
+      releaseWakeLock();
+
+      scoreA = 0;
+      scoreB = 0;
+      maxTotalScore = 0;
+
+      overtimeA = false;
+      overtimeB = false;
+      activePlayer = null;
+      gameOver = false;
+      isPaused = false;
+      pauseBtn.textContent = '一時停止';
+      pauseBtn.classList.remove('running', 'paused');
+
+      extensionUsedA = false;
+      extensionUsedB = false;
+      extensionActiveA = false;
+      extensionActiveB = false;
+
+      if (mode === 'shot') {
+        timeA = 0;
+        timeB = 0;
+        overtimeA = true;
+        overtimeB = true;
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+      } else {
+        timeA = initialMinutesA * 60;
+        timeB = initialMinutesB * 60;
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+      }
+
+      updateDisplays();
+    }
+
+    function switchTurn() {
+      if (!activePlayer || gameOver) return;
+
+      if (activePlayer === 'A' && overtimeA) {
+        shotTimeA = overtimeSecondsA;
+      } else if (activePlayer === 'B' && overtimeB) {
+        shotTimeB = overtimeSecondsB;
+      }
+
+      // エクステ中の表示はそのショットで終了
+      extensionActiveA = false;
+      extensionActiveB = false;
+
+      activePlayer = activePlayer === 'A' ? 'B' : 'A';
+
+      if (activePlayer === 'A' && overtimeA) {
+        shotTimeA = overtimeSecondsA;
+      } else if (activePlayer === 'B' && overtimeB) {
+        shotTimeB = overtimeSecondsB;
+      }
+
+      updateDisplays();
+    }
+
+    function handleClockClick(player) {
+      if (gameOver || isPaused) return;
+
+      ensureAudioCtx();
+
+      if (activePlayer === null && timerId === null) {
+        activePlayer = player;
+        if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
+        else if (activePlayer === 'B' && overtimeB) shotTimeB = overtimeSecondsB;
+        updateDisplays();
+        startTimerLoop();
+        return;
+      }
+
+      if (activePlayer === player) {
+        switchTurn();
+      }
+    }
+
+    clockAEl.addEventListener('click', () => handleClockClick('A'));
+    clockBEl.addEventListener('click', () => handleClockClick('B'));
+
+    function handleRackChange(delta) {
+      if (delta <= 0) return;
+
+      const total = scoreA + scoreB;
+      if (total > maxTotalScore) {
+        maxTotalScore = total;
+
+        if (mode === 'shot') {
+          extensionUsedA = false;
+          extensionUsedB = false;
+          extensionActiveA = false;
+          extensionActiveB = false;
+          updateExtensionIndicators();
+        }
+      }
+    }
+
+    document.querySelectorAll('.score-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const player = btn.dataset.player;
+        const delta = parseInt(btn.dataset.delta, 10) || 0;
+
+        if (player === 'A') {
+          scoreA = Math.max(0, scoreA + delta);
+        } else {
+          scoreB = Math.max(0, scoreB + delta);
+        }
+
+        handleRackChange(delta);
+        updateDisplays();
+
+        if (delta > 0) {
+          const scoreEl = (player === 'A') ? scoreAEl : scoreBEl;
+          scoreEl.classList.remove('score-hit');
+          void scoreEl.offsetWidth;
+          scoreEl.classList.add('score-hit');
+        }
+      });
+    });
+
+    function updateMinutesDisplay() {
+      minutesDisplayAEl.textContent = initialMinutesA.toString();
+      minutesDisplayBEl.textContent = initialMinutesB.toString();
+    }
+
+    function isGameStarted() {
+      return (
+        activePlayer !== null ||
+        timerId !== null ||
+        gameOver
+      );
+    }
+
+    function applyMinutesToClocksIfNotStarted() {
+      if (!isGameStarted() && mode === 'standard') {
+        timeA = initialMinutesA * 60;
+        timeB = initialMinutesB * 60;
+        updateDisplays();
+      }
+    }
+
+    minutesPlusAEl.addEventListener('click', () => {
+      if (initialMinutesA < 120) {
+        initialMinutesA++;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    minutesMinusAEl.addEventListener('click', () => {
+      if (initialMinutesA > 1) {
+        initialMinutesA--;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    minutesPlusBEl.addEventListener('click', () => {
+      if (initialMinutesB < 120) {
+        initialMinutesB++;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    minutesMinusBEl.addEventListener('click', () => {
+      if (initialMinutesB > 1) {
+        initialMinutesB--;
+        updateMinutesDisplay();
+        applyMinutesToClocksIfNotStarted();
+      }
+    });
+
+    function clampShotSeconds(sec) {
+      const min = 10;
+      const max = 90;
+      return Math.max(min, Math.min(max, sec));
+    }
+
+    function applyShotChange(player, delta) {
+      if (player === 'A') {
+        overtimeSecondsA = clampShotSeconds(overtimeSecondsA + delta);
+        shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      } else {
+        overtimeSecondsB = clampShotSeconds(overtimeSecondsB + delta);
+        shotDisplayBEl.textContent = overtimeSecondsB.toString();
+      }
+
+      if (!isGameStarted()) {
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+        if (mode === 'shot') {
+          updateDisplays();
+        }
+      }
+    }
+
+    shotPlusAEl.addEventListener('click', () => applyShotChange('A', 5));
+    shotMinusAEl.addEventListener('click', () => applyShotChange('A', -5));
+    shotPlusBEl.addEventListener('click', () => applyShotChange('B', 5));
+    shotMinusBEl.addEventListener('click', () => applyShotChange('B', -5));
+
+    function clampExtensionSeconds(sec) {
+      const min = 5;
+      const max = 120;
+      return Math.max(min, Math.min(max, sec));
+    }
+
+    function applyExtensionChange(player, delta) {
+      if (player === 'A') {
+        extensionSecondsA = clampExtensionSeconds(extensionSecondsA + delta);
+        if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      } else {
+        extensionSecondsB = clampExtensionSeconds(extensionSecondsB + delta);
+        if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+      }
+    }
+
+    extPlusAEl.addEventListener('click',  () => applyExtensionChange('A',  5));
+    extMinusAEl.addEventListener('click', () => applyExtensionChange('A', -5));
+    extPlusBEl.addEventListener('click',  () => applyExtensionChange('B',  5));
+    extMinusBEl.addEventListener('click', () => applyExtensionChange('B', -5));
+
+    function syncSettingsUI() {
+      soundToggle.checked = soundEnabled;
+      shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      shotDisplayBEl.textContent = overtimeSecondsB.toString();
+      minutesDisplayAEl.textContent = initialMinutesA.toString();
+      minutesDisplayBEl.textContent = initialMinutesB.toString();
+      if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+
+      if (modeStandardEl) modeStandardEl.checked = (mode === 'standard');
+      if (modeShotOnlyEl) modeShotOnlyEl.checked = (mode === 'shot');
+    }
+
+    function openSettings() {
+      syncSettingsUI();
+      settingsModal.classList.add('open');
+    }
+
+    function closeSettings() {
+      settingsModal.classList.remove('open');
+    }
+
+    settingsBtn.addEventListener('click', openSettings);
+    settingsCloseBtn.addEventListener('click', closeSettings);
+
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) closeSettings();
+    });
+
+    soundToggle.addEventListener('change', () => {
+      soundEnabled = soundToggle.checked;
+    });
+
+    function applyModeFromUI() {
+      const oldMode = mode;
+      if (modeStandardEl && modeStandardEl.checked) {
+        mode = 'standard';
+      } else if (modeShotOnlyEl && modeShotOnlyEl.checked) {
+        mode = 'shot';
+      }
+      if (mode !== oldMode) {
+        resetAll();
+      }
+    }
+
+    if (modeStandardEl) modeStandardEl.addEventListener('change', applyModeFromUI);
+    if (modeShotOnlyEl) modeShotOnlyEl.addEventListener('change', applyModeFromUI);
+
+    resetBtn.addEventListener('click', () => {
+      const ok = window.confirm('タイマーとスコアをすべてリセットします。\nよろしいですか？');
+      if (ok) resetAll();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      if (gameOver) return;
+      if (!isPaused) {
+        isPaused = true;
+        clearTimer();
+        pauseBtn.textContent = '再開';
+        pauseBtn.classList.remove('running');
+        pauseBtn.classList.add('paused');
+        releaseWakeLock();
+      } else {
+        isPaused = false;
+        pauseBtn.textContent = '一時停止';
+        pauseBtn.classList.remove('paused');
+        if (activePlayer !== null) startTimerLoop();
+      }
+    });
+
+    document.querySelectorAll('.player-label').forEach(label => {
+      label.addEventListener('click', e => e.stopPropagation());
+      label.addEventListener('touchstart', e => e.stopPropagation());
+      label.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          label.blur();
+        }
+      });
+    });
+
+    window.addEventListener('resize', resizeFonts);
+    window.addEventListener('orientationchange', resizeFonts);
+    window.addEventListener('load', resizeFonts);
+
+    updateMinutesDisplay();
+    resetAll();
+    resizeFonts();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./service-worker.js')
+          .catch((err) => {
+            console.log('Service Worker registration failed:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
