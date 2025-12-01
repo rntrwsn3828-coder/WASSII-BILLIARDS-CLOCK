@@ -18,6 +18,8 @@
       --accent: #3fa34d;
       --danger: #c0392b;
       --overtime: #aa6f00;
+
+      /* デフォルト値（実際のサイズは .time / .score 側の clamp() で決める） */
       --time-size: 80px;
       --score-size: 48px;
       --label-size: 14px;
@@ -41,7 +43,7 @@
 
     .app {
       min-height: 100vh;
-      min-height: 100dvh;  /* 対応ブラウザでは実表示高さに追従 */
+      min-height: 100dvh;
       width: 100%;
       margin: 0;
       padding: 8px;
@@ -134,7 +136,7 @@
     }
 
     .player-label {
-      font-size: clamp(1rem, 2.7vw, 1.4rem);
+      font-size: clamp(0.9rem, 1.6vh, 1.2rem);
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -151,7 +153,7 @@
     .player-label[contenteditable="true"] { cursor: text; }
 
     .turn-indicator {
-      font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+      font-size: clamp(0.7rem, 1.4vh, 0.9rem);
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -185,7 +187,7 @@
 
     /* EXTENSION バッジ（プレイヤーネーム横・緑に光る） */
     .ext-indicator {
-      font-size: clamp(0.8rem, 2.4vw, 1.1rem);
+      font-size: clamp(0.8rem, 1.6vh, 1.0rem);
       padding: 2px 10px;
       border-radius: 999px;
       border: 1px solid rgba(76, 175, 80, 0.9);
@@ -238,8 +240,9 @@
       display: none;
     }
 
+    /* ▼ 文字サイズの決定を CSS の clamp + vh に一本化 ▼ */
     .time {
-      font-size: var(--time-size);
+      font-size: clamp(60px, 20vh, 150px); /* 画面の高さの20%を目安に大きく */
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.06em;
       font-weight: 600;
@@ -251,7 +254,7 @@
     .time.overtime { color: var(--overtime); }
 
     .field-caption {
-      font-size: var(--label-size);
+      font-size: clamp(11px, 2.2vh, 16px);
       letter-spacing: 0.18em;
       text-transform: uppercase;
       opacity: 0.7;
@@ -267,7 +270,7 @@
     }
 
     .score {
-      font-size: var(--score-size);
+      font-size: clamp(32px, 10vh, 96px); /* TIME より一回り小さく、高さベースで */
       min-width: 2.4em;
       text-align: center;
       font-weight: 600;
@@ -505,7 +508,7 @@
       text-align: right;
     }
 
-    /* 幅が狭いデバイス（スマホ）向け調整 */
+    /* 幅が狭いデバイス（スマホ縦） */
     @media (max-width: 700px) {
       .app {
         padding: 6px;
@@ -529,7 +532,19 @@
       }
     }
 
-    /* 高さが低い端末向け：余白を圧縮して見切れ防止＆モーダル上寄せ */
+    /* 高さがかなり低い端末（スマホ横など）向け微調整 */
+    @media (max-height: 600px) {
+      .time {
+        font-size: clamp(48px, 18vh, 110px);
+      }
+      .score {
+        font-size: clamp(28px, 9vh, 80px);
+      }
+      .player-label {
+        font-size: clamp(0.8rem, 1.4vh, 1rem);
+      }
+    }
+
     @media (max-height: 720px) {
       .app {
         padding-top: 4px;
@@ -765,7 +780,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.2';
+    const APP_VERSION = 'v0.9.3';
 
     let initialMinutesA = 20;
     let initialMinutesB = 20;
@@ -974,96 +989,6 @@
         console.warn('speech error:', e);
       }
     }
-
-    // ==== フォント自動調整（.app 全体を対象に「増減」両対応） ====
-// ==== フォント自動調整（TIME/SCOREの大きさを、下のボタン行まで含めて最適化） ====
-function resizeFonts() {
-  const root = document.documentElement;
-  const app  = document.querySelector('.app');
-  if (!app) return;
-
-  const bottomControls = document.querySelector('.bottom-controls') || app;
-
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const viewportH = (window.visualViewport && window.visualViewport.height)
-    ? window.visualViewport.height
-    : window.innerHeight;
-
-  const shortSide = Math.min(w, h);
-
-  // ラベルサイズは短辺から決定
-  const labelSize = Math.max(11, shortSide * 0.02);
-  root.style.setProperty('--label-size', `${labelSize}px`);
-
-  // 現在のフォントサイズ取得
-  const computed = getComputedStyle(root);
-  let timeSize  = parseFloat(computed.getPropertyValue('--time-size'))  || 80;
-  let scoreSize = parseFloat(computed.getPropertyValue('--score-size')) || 48;
-
-  // 端末サイズから「狙いのサイズ」を決める（前より少し攻め気味）
-  let baseTime, baseScore;
-  if (shortSide <= 700) {
-    // スマホ〜小さめタブレット
-    baseTime  = shortSide * 0.40;   // ここを上げるともっと大きくできる
-    baseScore = shortSide * 0.26;
-  } else {
-    // 大きめタブレット・PC
-    baseTime  = shortSide * 0.32;
-    baseScore = shortSide * 0.22;
-  }
-
-  const MIN_TIME  = 40;
-  const MAX_TIME  = 320;
-  const MIN_SCORE = 28;
-  const MAX_SCORE = 220;
-
-  // 初回呼び出し時だけ、狙いのサイズを採用
-  if (!resizeFonts._initialized) {
-    timeSize  = baseTime;
-    scoreSize = baseScore;
-    resizeFonts._initialized = true;
-  }
-
-  // 安全な範囲にクリップ
-  timeSize  = Math.max(MIN_TIME,  Math.min(timeSize,  MAX_TIME));
-  scoreSize = Math.max(MIN_SCORE, Math.min(scoreSize, MAX_SCORE));
-
-  root.style.setProperty('--time-size',  `${timeSize}px`);
-  root.style.setProperty('--score-size', `${scoreSize}px`);
-
-  // 「下のボタン行」の bottom を基準に、はみ出し・余白をチェック
-  const margin = 12; // これくらい余白があればよしとする
-
-  let guard = 0;
-  while (guard < 120) {
-    const rect   = bottomControls.getBoundingClientRect();
-    const bottom = rect.bottom;
-
-    if (bottom > viewportH) {
-      // 画面からはみ出している → 少しずつ小さく
-      if (timeSize <= MIN_TIME) break;
-      timeSize  -= 2;
-      scoreSize -= 1.2;
-    } else if (bottom < viewportH - margin && timeSize < MAX_TIME) {
-      // まだ余裕がある → 少しずつ大きく
-      timeSize  += 2;
-      scoreSize += 1.2;
-    } else {
-      // ほどよい位置
-      break;
-    }
-
-    timeSize  = Math.max(MIN_TIME,  Math.min(timeSize,  MAX_TIME));
-    scoreSize = Math.max(MIN_SCORE, Math.min(scoreSize, MAX_SCORE));
-
-    root.style.setProperty('--time-size',  `${timeSize}px`);
-    root.style.setProperty('--score-size', `${scoreSize}px`);
-
-    guard++;
-  }
-}
-resizeFonts._initialized = false;
 
     function formatTime(sec) {
       const s = Math.max(0, sec);
@@ -1574,15 +1499,9 @@ resizeFonts._initialized = false;
       });
     });
 
-    window.addEventListener('resize', resizeFonts);
-    window.addEventListener('orientationchange', resizeFonts);
-
     window.addEventListener('load', () => {
       const verEl = document.getElementById('appVersion');
       if (verEl) verEl.textContent = APP_VERSION;
-
-      resizeFonts();
-      setTimeout(resizeFonts, 300);
     });
 
     // 初期化
@@ -1601,4 +1520,3 @@ resizeFonts._initialized = false;
   </script>
 </body>
 </html>
-
