@@ -39,7 +39,7 @@
       touch-action: manipulation;
       padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
                env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-      overflow-x: hidden; /* 横スクロールを潰す */
+      overflow-x: hidden;
     }
 
     .app {
@@ -769,7 +769,12 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.31';
+    const APP_VERSION = 'v0.9.4';
+
+    // 汎用 clamp
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
 
     let initialMinutesA = 20;
     let initialMinutesB = 20;
@@ -844,7 +849,7 @@
 
     const shotPlusAEl = document.getElementById('shotPlusA');
     const shotMinusAEl = document.getElementById('shotMinusA');
-    const shotPlusBEl = document.getElementById('shotPlusB');
+    the const shotPlusBEl = document.getElementById('shotPlusB');
     const shotMinusBEl = document.getElementById('shotMinusB');
 
     const extPlusAEl  = document.getElementById('extPlusA');
@@ -979,71 +984,75 @@
       }
     }
 
-    // ===== フォント自動調整：毎回「大きく初期化 → 収まるまで縮めるだけ」 =====
+    // ===== レイアウト基準でのフォント自動調整 =====
     function resizeFonts() {
       const root = document.documentElement;
-      const bottom = document.querySelector('.bottom-controls');
-      if (!bottom) return;
 
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const vw = window.innerWidth  || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
       const vvh = (window.visualViewport && window.visualViewport.height)
         ? window.visualViewport.height
         : vh;
 
-      const shortSide = Math.min(vw, vh);
-      const isPortrait = vh >= vw;
+      // CSSと同じ条件で縦レイアウトかどうか判定
+      const isVerticalLayout = vw <= 700;
 
-      // ラベル用
-      const labelSize = Math.max(11, shortSide * 0.02);
-      root.style.setProperty('--label-size', `${labelSize}px`);
+      // レイアウト図面（基準解像度＋基準フォント）
+      let designW, designH;
+      let designTime, designScore, designLabel;
 
-      // まずは「かなり大きめ」のベースからスタート
-      let baseTime, baseScore;
-      if (isPortrait) {
-        // スマホ縦など：短辺＝横幅
-        baseTime  = shortSide * 0.42;
-        baseScore = shortSide * 0.28;
+      if (isVerticalLayout) {
+        // スマホ縦レイアウト：縦長想定
+        designW    = 720;
+        designH    = 1200;
+        designTime = 210;
+        designScore= 140;
+        designLabel= 18;
       } else {
-        // 横向き：短辺＝高さ
-        baseTime  = shortSide * 0.36;
-        baseScore = shortSide * 0.24;
+        // 横・タブレット・PC：横長2面
+        designW    = 1280;
+        designH    = 800;
+        designTime = 170;
+        designScore= 120;
+        designLabel= 16;
       }
 
-      const MIN_TIME  = 40;
-      const MAX_TIME  = 260;
-      const MIN_SCORE = 28;
-      const MAX_SCORE = 180;
+      const scaleW = vw  / designW;
+      const scaleH = vvh / designH;
+      let scale    = Math.min(scaleW, scaleH);
 
-      let timeSize  = Math.max(MIN_TIME,  Math.min(baseTime,  MAX_TIME));
-      let scoreSize = Math.max(MIN_SCORE, Math.min(baseScore, MAX_SCORE));
+      const MIN_SCALE = 0.35;
+      const MAX_SCALE = 2.0;
 
-      root.style.setProperty('--time-size',  `${timeSize}px`);
-      root.style.setProperty('--score-size', `${scoreSize}px`);
+      function applyScale(s) {
+        s = clamp(s, MIN_SCALE, MAX_SCALE);
 
-      // 下のボタン行が「見える高さ」vvh 内に収まるまで縮める
-      let guard = 0;
-      while (guard < 80) {
-        const rect = bottom.getBoundingClientRect();
-        const bottomY = rect.bottom;
-
-        if (bottomY <= vvh) {
-          // もう画面に収まっている
-          break;
-        }
-
-        if (timeSize <= MIN_TIME && scoreSize <= MIN_SCORE) {
-          // これ以上は縮められない
-          break;
-        }
-
-        timeSize  = Math.max(MIN_TIME,  timeSize  - 2);
-        scoreSize = Math.max(MIN_SCORE, scoreSize - 1.2);
+        const timeSize  = clamp(designTime  * s, 40, 260);
+        const scoreSize = clamp(designScore * s, 28, 180);
+        const labelSize = clamp(designLabel * s, 11, 22);
 
         root.style.setProperty('--time-size',  `${timeSize}px`);
         root.style.setProperty('--score-size', `${scoreSize}px`);
+        root.style.setProperty('--label-size', `${labelSize}px`);
 
-        guard++;
+        return s;
+      }
+
+      // 一旦図面通りのスケールで適用
+      scale = applyScale(scale);
+
+      // ボトムのボタン列が画面内に収まっているか確認し、
+      // はみ出していればスケールを少し落とす
+      const bottom = document.querySelector('.bottom-controls');
+      if (bottom) {
+        const rect = bottom.getBoundingClientRect();
+        const bottomY = rect.bottom;
+
+        if (bottomY > vvh) {
+          const ratio = vvh / bottomY;
+          const newScale = scale * ratio * 0.98;
+          applyScale(newScale);
+        }
       }
     }
 
@@ -1267,7 +1276,6 @@
       }
 
       updateDisplays();
-      // リセット後にフォント調整
       resizeFonts();
     }
 
@@ -1574,9 +1582,9 @@
       if (verEl) verEl.textContent = APP_VERSION;
 
       updateMinutesDisplay();
-      resetAll();       // ここでupdateDisplays + resizeFontsも呼ばれる
+      resetAll();       // 中で updateDisplays() と resizeFonts() も呼ばれる
       resizeFonts();
-      setTimeout(resizeFonts, 300); // アドレスバーの表示状態が変わった後にも再調整
+      setTimeout(resizeFonts, 300);
     });
 
     if ('serviceWorker' in navigator) {
