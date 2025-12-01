@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wassii-billiard-clock-v2';
+const CACHE_NAME = 'wassii-billiard-clock-v2.1';  // ★バージョンを上げる
 const ASSETS = [
   './',
   './index.html',
@@ -7,34 +7,48 @@ const ASSETS = [
   './icons/icon-512.png'
 ];
 
-// インストール時にキャッシュ
+// インストール時にキャッシュして、すぐ新SWに切り替え
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
+  self.skipWaiting();   // ★待たずにこのSWを有効にする
 });
 
-// 古いキャッシュの掃除
+// 古いキャッシュ削除＋すぐにクライアント支配
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    caches.keys().then((keys) =>
+      Promise.all(
         keys
           .filter((key) => key !== CACHE_NAME)
           .map((key) => caches.delete(key))
-      );
-    })
+      )
+    )
   );
+  self.clients.claim();  // ★今開いているタブ／PWAにも即反映
 });
 
-// オフライン対応：キャッシュ優先
+// fetch ハンドラ
 self.addEventListener('fetch', (event) => {
+  const req = event.request;
+
+  // HTML（ナビゲーション）は「ネットワーク優先 + キャッシュfallback」
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          return res;
+        })
+        .catch(() => caches.match(req))  // オフライン時はキャッシュ
+    );
+    return;
+  }
+
+  // それ以外のアイコン等はこれまで通り「キャッシュ優先」
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // キャッシュがあればそれを返し、なければネットワークから取得
-      return response || fetch(event.request);
-    })
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });
