@@ -907,46 +907,62 @@
 
     let audioCtx = null;
 
-    // Wake Lock 用
-    let wakeLock = null;
+// Wake Lock 用
+let wakeLock = null;
 
-    async function requestWakeLock() {
-      if (!('wakeLock' in navigator)) return;
-      try {
-        if (wakeLock) {
-          await wakeLock.release();
-          wakeLock = null;
-        }
-        wakeLock = await navigator.wakeLock.request('screen');
-        wakeLock.addEventListener('release', () => {
-          wakeLock = null;
-        });
-      } catch (e) {
-        console.warn('wakeLock error:', e);
-        wakeLock = null;
-      }
-    }
+async function requestWakeLock() {
+  // 対応していないブラウザの場合は何もしない
+  if (!('wakeLock' in navigator)) {
+    console.log('[WakeLock] not supported on this browser.');
+    return;
+  }
 
-    async function releaseWakeLock() {
-      try {
-        if (wakeLock) {
-          await wakeLock.release();
-          wakeLock = null;
-        }
-      } catch (e) {
-        console.warn('wakeLock release error:', e);
-      }
-    }
+  // すでに取得済みなら何もしない
+  if (wakeLock) {
+    return;
+  }
 
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        if (!gameOver && !isPaused && activePlayer !== null) {
-          requestWakeLock();
-        }
-      } else {
-        releaseWakeLock();
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    console.log('[WakeLock] acquired.');
+
+    // システム側の理由で解放されたとき
+    wakeLock.addEventListener('release', () => {
+      console.log('[WakeLock] released.');
+      wakeLock = null;
+
+      // 画面が見えていて、タイマーが動いている状態なら取り直す
+      if (!document.hidden && !gameOver && !isPaused && activePlayer !== null) {
+        requestWakeLock();
       }
     });
+  } catch (e) {
+    console.warn('[WakeLock] error:', e);
+    wakeLock = null;
+  }
+}
+
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  try {
+    await wakeLock.release();
+    wakeLock = null;
+    console.log('[WakeLock] manually released.');
+  } catch (e) {
+    console.warn('[WakeLock] release error:', e);
+  }
+}
+
+// タブが見えなくなったら一旦解放、戻ったら必要なときだけ取り直し
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (!gameOver && !isPaused && activePlayer !== null) {
+      requestWakeLock();
+    }
+  } else {
+    releaseWakeLock();
+  }
+});
 
     function ensureAudioCtx() {
       try {
@@ -1642,3 +1658,4 @@
   </script>
 </body>
 </html>
+
