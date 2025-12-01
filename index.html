@@ -1214,7 +1214,20 @@
     updateMinutesDisplay();
     resetAll();
     resizeFonts();
+
+        // PWA 用 Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./service-worker.js')
+          .catch((err) => {
+            console.log('Service Worker registration failed:', err);
+          });
+      });
+    }
+
   </script>
 </body>
 </html>
+
 
