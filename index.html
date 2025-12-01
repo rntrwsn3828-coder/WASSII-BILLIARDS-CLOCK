@@ -241,7 +241,7 @@
       display: none;
     }
 
-    /* ▼ TIME/SCORE は JS が設定する CSS変数ベース ▼ */
+    /* TIME/SCORE は JS が設定する CSS変数ベース */
     .time {
       font-size: var(--time-size);
       font-variant-numeric: tabular-nums;
@@ -509,14 +509,10 @@
       text-align: right;
     }
 
-    /* スマホ縦など幅が狭いときは時計を縦積み */
+    /* スマホなど幅が狭いときの微調整（横向き前提） */
     @media (max-width: 700px) {
       .app {
         padding: 6px;
-      }
-
-      .clocks {
-        flex-direction: column;
       }
 
       .clock {
@@ -577,6 +573,37 @@
         align-items: flex-start;
         padding-top: 8px;
       }
+    }
+
+    /* 縦向きのときに表示するオーバーレイ */
+    .orientation-warning {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #f5f5f5;
+      z-index: 2000;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .orientation-warning-inner {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .orientation-warning-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+
+    .orientation-warning-text {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -643,6 +670,17 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- 縦向き用オーバーレイ -->
+  <div class="orientation-warning" id="orientationWarning">
+    <div class="orientation-warning-inner">
+      <div class="orientation-warning-icon">↻</div>
+      <div class="orientation-warning-text">
+        このアプリは横向き専用です。<br>
+        端末を横向きにしてご利用ください。
+      </div>
+    </div>
   </div>
 
   <!-- 設定モーダル -->
@@ -769,7 +807,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.4';
+    const APP_VERSION = 'v0.9.5';
 
     // 汎用 clamp
     function clamp(value, min, max) {
@@ -984,7 +1022,7 @@
       }
     }
 
-    // ===== レイアウト基準でのフォント自動調整 =====
+    // ===== レイアウト基準でのフォント自動調整（横向き専用） =====
     function resizeFonts() {
       const root = document.documentElement;
 
@@ -994,28 +1032,12 @@
         ? window.visualViewport.height
         : vh;
 
-      // CSSと同じ条件で縦レイアウトかどうか判定
-      const isVerticalLayout = vw <= 700;
-
-      // レイアウト図面（基準解像度＋基準フォント）
-      let designW, designH;
-      let designTime, designScore, designLabel;
-
-      if (isVerticalLayout) {
-        // スマホ縦レイアウト：縦長想定
-        designW    = 720;
-        designH    = 1200;
-        designTime = 210;
-        designScore= 140;
-        designLabel= 18;
-      } else {
-        // 横・タブレット・PC：横長2面
-        designW    = 1280;
-        designH    = 800;
-        designTime = 170;
-        designScore= 120;
-        designLabel= 16;
-      }
+      // 横向き前提の図面
+      const designW    = 1280;
+      const designH    = 800;
+      const designTime = 170;
+      const designScore= 120;
+      const designLabel= 16;
 
       const scaleW = vw  / designW;
       const scaleH = vvh / designH;
@@ -1053,6 +1075,30 @@
           const newScale = scale * ratio * 0.98;
           applyScale(newScale);
         }
+      }
+    }
+
+    // 縦／横で UI 切り替え
+    function updateOrientationUI() {
+      const vw = window.innerWidth  || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const isLandscape = vw >= vh;
+
+      const appEl = document.querySelector('.app');
+      const warningEl = document.getElementById('orientationWarning');
+
+      if (!appEl || !warningEl) {
+        resizeFonts();
+        return;
+      }
+
+      if (isLandscape) {
+        appEl.style.display = '';
+        warningEl.style.display = 'none';
+        resizeFonts();
+      } else {
+        appEl.style.display = 'none';
+        warningEl.style.display = 'flex';
       }
     }
 
@@ -1276,7 +1322,6 @@
       }
 
       updateDisplays();
-      resizeFonts();
     }
 
     function switchTurn() {
@@ -1383,7 +1428,6 @@
         timeA = initialMinutesA * 60;
         timeB = initialMinutesB * 60;
         updateDisplays();
-        resizeFonts();
       }
     }
 
@@ -1439,7 +1483,6 @@
         shotTimeB = overtimeSecondsB;
         if (mode === 'shot') {
           updateDisplays();
-          resizeFonts();
         }
       }
     }
@@ -1568,13 +1611,13 @@
       });
     });
 
-    // フォント調整トリガー
+    // 画面サイズ変化時：向き判定＋フォント調整
     window.addEventListener('resize', () => {
-      resizeFonts();
+      updateOrientationUI();
     });
 
     window.addEventListener('orientationchange', () => {
-      setTimeout(resizeFonts, 200);
+      setTimeout(updateOrientationUI, 200);
     });
 
     window.addEventListener('load', () => {
@@ -1582,9 +1625,9 @@
       if (verEl) verEl.textContent = APP_VERSION;
 
       updateMinutesDisplay();
-      resetAll();       // 中で updateDisplays() と resizeFonts() も呼ばれる
-      resizeFonts();
-      setTimeout(resizeFonts, 300);
+      resetAll();
+      updateOrientationUI();
+      setTimeout(updateOrientationUI, 300);
     });
 
     if ('serviceWorker' in navigator) {
@@ -1599,4 +1642,3 @@
   </script>
 </body>
 </html>
-
