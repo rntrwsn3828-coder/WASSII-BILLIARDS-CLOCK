@@ -529,7 +529,7 @@
       }
     }
 
-    /* 高さが低い端末向け：余白を圧縮して見切れ防止 */
+    /* 高さが低い端末向け：余白を圧縮して見切れ防止＆モーダル上寄せ */
     @media (max-height: 720px) {
       .app {
         padding-top: 4px;
@@ -765,7 +765,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.0';
+    const APP_VERSION = 'v0.9.1';
 
     let initialMinutesA = 20;
     let initialMinutesB = 20;
@@ -789,9 +789,6 @@
     let isPaused = false;
 
     let soundEnabled = true;
-
-    // 直前の画面の向き
-    let lastOrientation = null;
 
     // モード: 'standard' = 持ち時間あり, 'shot' = 最初からショットクロックのみ
     let mode = 'standard';
@@ -978,7 +975,7 @@
       }
     }
 
-    // ==== フォント自動調整 ====
+    // ==== フォント自動調整（.app 全体を対象に「増減」両対応） ====
     function resizeFonts() {
       const root = document.documentElement;
       const app  = document.querySelector('.app');
@@ -986,55 +983,82 @@
 
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const orientation = w >= h ? 'landscape' : 'portrait';
-
       const viewportH = (window.visualViewport && window.visualViewport.height)
         ? window.visualViewport.height
         : window.innerHeight;
 
       const shortSide = Math.min(w, h);
 
+      // ラベルサイズは単純に短辺から決定
       const labelSize = Math.max(11, shortSide * 0.02);
       root.style.setProperty('--label-size', `${labelSize}px`);
 
-      const computed   = getComputedStyle(root);
+      // 現在値を取得
+      const computed = getComputedStyle(root);
       let timeSize  = parseFloat(computed.getPropertyValue('--time-size'))  || 80;
       let scoreSize = parseFloat(computed.getPropertyValue('--score-size')) || 48;
 
-      const orientationChanged = (lastOrientation !== orientation);
-
-      if (lastOrientation === null || orientationChanged) {
-        if (shortSide <= 700) {
-          timeSize  = shortSide * 0.38;
-          scoreSize = shortSide * 0.24;
-        } else {
-          timeSize  = shortSide * 0.32;
-          scoreSize = shortSide * 0.20;
-        }
-
-        timeSize  = Math.max(40, Math.min(timeSize, 320));
-        scoreSize = Math.max(30, Math.min(scoreSize, 220));
+      // ベースとなる「狙いのサイズ」
+      let baseTime, baseScore;
+      if (shortSide <= 700) {
+        // スマホ〜小型タブレット
+        baseTime  = shortSide * 0.34;   // やや大きめ
+        baseScore = shortSide * 0.22;
+      } else {
+        // 大きめタブレット・PC
+        baseTime  = shortSide * 0.30;
+        baseScore = shortSide * 0.20;
       }
 
-      lastOrientation = orientation;
+      // 1回目だけ、あまりに離れていればベースに寄せる
+      if (!resizeFonts._initialized) {
+        timeSize  = baseTime;
+        scoreSize = baseScore;
+        resizeFonts._initialized = true;
+      }
+
+      const MIN_TIME  = 40;
+      const MAX_TIME  = 260;
+      const MIN_SCORE = 28;
+      const MAX_SCORE = 200;
+
+      timeSize  = Math.max(MIN_TIME,  Math.min(timeSize,  MAX_TIME));
+      scoreSize = Math.max(MIN_SCORE, Math.min(scoreSize, MAX_SCORE));
 
       root.style.setProperty('--time-size',  `${timeSize}px`);
       root.style.setProperty('--score-size', `${scoreSize}px`);
 
-      const fits = () => {
-        const rect = app.getBoundingClientRect();
-        return rect.bottom <= viewportH - 2;
-      };
+      const margin = 20; // 下にこれくらい余裕があれば「まだ大きくして良い」
 
       let guard = 0;
-      while (!fits() && guard < 80 && timeSize > 40) {
-        timeSize  -= 2;
-        scoreSize -= 1.4;
+      while (guard < 120) {
+        const rect = app.getBoundingClientRect();
+        const bottom = rect.bottom;
+
+        if (bottom > viewportH) {
+          // 画面からはみ出している → 少しずつ小さく
+          if (timeSize <= MIN_TIME) break;
+          timeSize  -= 2;
+          scoreSize -= 1.2;
+        } else if (bottom < viewportH - margin && timeSize < MAX_TIME) {
+          // まだ余裕がある → 少しずつ大きく
+          timeSize  += 2;
+          scoreSize += 1.2;
+        } else {
+          // ちょうどよい範囲
+          break;
+        }
+
+        timeSize  = Math.max(MIN_TIME,  Math.min(timeSize,  MAX_TIME));
+        scoreSize = Math.max(MIN_SCORE, Math.min(scoreSize, MAX_SCORE));
+
         root.style.setProperty('--time-size',  `${timeSize}px`);
         root.style.setProperty('--score-size', `${scoreSize}px`);
+
         guard++;
       }
     }
+    resizeFonts._initialized = false;
 
     function formatTime(sec) {
       const s = Math.max(0, sec);
