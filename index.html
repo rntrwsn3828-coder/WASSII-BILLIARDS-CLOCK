@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <title>WASSII BILLIARD CLOCK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  
-    <meta name="theme-color" content="#000000">
+
+  <meta name="theme-color" content="#000000">
   <link rel="manifest" href="manifest.webmanifest">
-  
+
   <style>
     :root {
       --bg: #101010;
@@ -23,13 +23,9 @@
       --label-size: 14px;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html {
-      height: 100%;
-    }
+    html { height: 100%; }
 
     body {
       margin: 0;
@@ -52,27 +48,6 @@
       flex-direction: column;
       gap: 8px;
       background: radial-gradient(circle at top, #222 0, #000 55%, #000 100%);
-    }
-
-    /* header/title/subtitleは使わないがCSSはそのまま残しておく */
-    header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: baseline;
-      gap: 8px;
-      padding: 4px 4px 0;
-    }
-
-    .title {
-      font-size: clamp(1.1rem, 2.6vw, 1.5rem);
-      font-weight: 600;
-      letter-spacing: 0.1em;
-    }
-
-    .subtitle {
-      font-size: clamp(0.7rem, 1.6vw, 0.9rem);
-      opacity: 0.7;
-      letter-spacing: 0.18em;
     }
 
     .main {
@@ -128,9 +103,7 @@
         0 0 28px rgba(76, 175, 80, 0.7);
     }
 
-    .clock.active::before {
-      opacity: 0.4;
-    }
+    .clock.active::before { opacity: 0.4; }
 
     .clock.finished {
       background: var(--panel-finished);
@@ -139,13 +112,9 @@
         0 0 28px rgba(231, 76, 60, 0.7);
     }
 
-    .clock.finished::before {
-      opacity: 0.3;
-    }
+    .clock.finished::before { opacity: 0.3; }
 
-    .clock.finished .time {
-      color: var(--danger);
-    }
+    .clock.finished .time { color: var(--danger); }
 
     .clock-header {
       display: flex;
@@ -154,6 +123,13 @@
       gap: 6px;
       position: relative;
       z-index: 1;
+    }
+
+    .header-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
     }
 
     .player-label {
@@ -171,9 +147,7 @@
       text-overflow: ellipsis;
     }
 
-    .player-label[contenteditable="true"] {
-      cursor: text;
-    }
+    .player-label[contenteditable="true"] { cursor: text; }
 
     .turn-indicator {
       font-size: clamp(0.7rem, 1.6vw, 0.9rem);
@@ -193,13 +167,8 @@
       background: #777;
     }
 
-    .clock.active .turn-dot {
-      background: #7fff7f;
-    }
-
-    .clock.finished .turn-dot {
-      background: #ff6b6b;
-    }
+    .clock.active .turn-dot { background: #7fff7f; }
+    .clock.finished .turn-dot { background: #ff6b6b; }
 
     .time-block {
       flex: 1 1 auto;
@@ -207,17 +176,65 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
       position: relative;
       z-index: 1;
       padding: 4px 0;
     }
 
-    .time-label {
-      font-size: var(--label-size);
+    /* EXTENSION バッジ（プレイヤーネーム横・緑に光る） */
+    .ext-indicator {
+      font-size: clamp(0.9rem, 3vw, 1.3rem);
+      padding: 4px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(76, 175, 80, 0.95);
+      background: radial-gradient(circle at top,
+                  rgba(76, 175, 80, 0.45),
+                  rgba(0, 0, 0, 0.2));
+      color: #c8ffcc;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      opacity: 0.7;
+      box-shadow: 0 0 14px rgba(76, 175, 80, 0.9);
+      display: none;
+      white-space: nowrap;
+    }
+
+    .ext-indicator.used {
+      opacity: 0.35;
+      text-decoration: line-through;
+      background: rgba(120, 120, 120, 0.6);
+      border-color: rgba(200, 200, 200, 0.8);
+      color: #cccccc;
+      box-shadow: none;
+    }
+
+    .ext-indicator.blink {
+      animation: extBlink 0.8s ease-in-out infinite;
+    }
+
+    @keyframes extBlink {
+      0% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        box-shadow: 0 0 22px rgba(144, 238, 144, 1);
+        transform: scale(1.06);
+      }
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
+        transform: scale(1);
+      }
+    }
+
+    body.shot-mode .ext-indicator {
+      display: inline-flex;
+    }
+    body:not(.shot-mode) .ext-indicator {
+      display: none;
     }
 
     .time {
@@ -230,9 +247,7 @@
         0 0 24px rgba(0, 0, 0, 0.95);
     }
 
-    .time.overtime {
-      color: var(--overtime);
-    }
+    .time.overtime { color: var(--overtime); }
 
     .field-caption {
       font-size: var(--label-size);
@@ -262,21 +277,9 @@
     }
 
     @keyframes scoreHit {
-      0% {
-        transform: scale(1);
-        color: var(--text-main);
-        text-shadow: none;
-      }
-      40% {
-        transform: scale(1.35);
-        color: var(--accent);
-        text-shadow: 0 0 10px rgba(63, 163, 77, 0.9);
-      }
-      100% {
-        transform: scale(1);
-        color: var(--text-main);
-        text-shadow: none;
-      }
+      0%   { transform: scale(1);   color: var(--text-main); text-shadow: none; }
+      40%  { transform: scale(1.35); color: var(--accent); text-shadow: 0 0 10px rgba(63, 163, 77, 0.9); }
+      100% { transform: scale(1);   color: var(--text-main); text-shadow: none; }
     }
 
     .score-btn {
@@ -324,28 +327,16 @@
       touch-action: manipulation;
     }
 
-    #pauseBtn {
-      background: #555;
-      color: #fff;
-    }
-
-    #pauseBtn.running {
-      background: #c0392b;
-    }
-
-    #pauseBtn.paused {
-      background: #2e7d32;
-    }
+    #pauseBtn { background: #555; color: #fff; }
+    #pauseBtn.running { background: #c0392b; }
+    #pauseBtn.paused  { background: #2e7d32; }
 
     #pauseBtn:active {
       transform: scale(0.97);
       filter: brightness(1.1);
     }
 
-    #resetBtn {
-      background: #444;
-      color: #fff;
-    }
+    #resetBtn { background: #444; color: #fff; }
 
     #resetBtn:active {
       transform: scale(0.97);
@@ -373,9 +364,7 @@
       padding: 16px;
     }
 
-    .settings-modal-backdrop.open {
-      display: flex;
-    }
+    .settings-modal-backdrop.open { display: flex; }
 
     .settings-modal {
       max-width: 420px;
@@ -428,9 +417,7 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .settings-row:last-child {
-      border-bottom: none;
-    }
+    .settings-row:last-child { border-bottom: none; }
 
     .settings-label {
       font-size: 0.85rem;
@@ -441,6 +428,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
     }
 
     .settings-toggle input[type="checkbox"] {
@@ -506,44 +494,30 @@
     }
 
     @media (max-width: 700px) {
-      .app {
-        padding: 6px;
-      }
-
-      .clocks {
-        flex-direction: column;
-      }
-
-      .clock {
-        min-height: 34vh;
-      }
-
-      .buttons-row {
-        gap: 6px;
-      }
-
-      .btn-main {
-        font-size: 0.9rem;
-      }
+      .app { padding: 6px; }
+      .clocks { flex-direction: column; }
+      .clock { min-height: 34vh; }
+      .buttons-row { gap: 6px; }
+      .btn-main { font-size: 0.9rem; }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- ヘッダー文字は削除 -->
-
     <main class="main">
       <section class="clocks">
         <div class="clock" data-player="A" id="clockA">
           <div class="clock-header">
-            <div class="player-label" contenteditable="true">PLAYER 1</div>
+            <div class="header-left">
+              <div class="player-label" contenteditable="true">PLAYER 1</div>
+              <div class="ext-indicator" id="extA">EXTENSION</div>
+            </div>
             <div class="turn-indicator">
               <span class="turn-dot"></span>
               <span>TURN</span>
             </div>
           </div>
           <div class="time-block">
-           
             <div class="time" id="timeA">20:00</div>
           </div>
 
@@ -559,14 +533,16 @@
 
         <div class="clock" data-player="B" id="clockB">
           <div class="clock-header">
-            <div class="player-label" contenteditable="true">PLAYER 2</div>
+            <div class="header-left">
+              <div class="player-label" contenteditable="true">PLAYER 2</div>
+              <div class="ext-indicator" id="extB">EXTENSION</div>
+            </div>
             <div class="turn-indicator">
               <span class="turn-dot"></span>
               <span>TURN</span>
             </div>
           </div>
           <div class="time-block">
-           
             <div class="time" id="timeB">20:00</div>
           </div>
 
@@ -599,6 +575,23 @@
         <button class="settings-close" id="settingsCloseBtn">&times;</button>
       </div>
       <div class="settings-content">
+
+        <!-- モード切り替え -->
+        <div class="settings-row">
+          <div class="settings-label">モード</div>
+          <div class="settings-toggle">
+            <label>
+              <input type="radio" name="modeSelect" id="modeStandard" value="standard" checked>
+              通常
+            </label>
+            <label>
+              <input type="radio" name="modeSelect" id="modeShotOnly" value="shot">
+              ショットクロック
+            </label>
+          </div>
+        </div>
+
+        <!-- サウンド -->
         <div class="settings-row">
           <div class="settings-label">サウンド</div>
           <div class="settings-toggle">
@@ -609,11 +602,12 @@
           </div>
         </div>
 
+        <!-- ショットクロック -->
         <div class="settings-row">
           <div class="settings-label">ショットクロック（秒）</div>
           <div class="shot-settings">
             <div class="shot-row">
-              <span class="shot-row-label">P1 ショット</span>
+              <span class="shot-row-label">1P</span>
               <div class="shot-row-controls">
                 <button class="shot-btn" id="shotMinusA">-</button>
                 <span class="shot-display" id="shotDisplayA">30</span>
@@ -621,7 +615,7 @@
               </div>
             </div>
             <div class="shot-row">
-              <span class="shot-row-label">P2 ショット</span>
+              <span class="shot-row-label">2P</span>
               <div class="shot-row-controls">
                 <button class="shot-btn" id="shotMinusB">-</button>
                 <span class="shot-display" id="shotDisplayB">30</span>
@@ -631,11 +625,35 @@
           </div>
         </div>
 
+        <!-- エクステンション -->
+        <div class="modal-section">
+          <div class="modal-section-title">エクステンション（秒）</div>
+          <div class="shot-settings">
+            <div class="shot-row">
+              <span class="shot-row-label">1P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="extMinusA">-</button>
+                <span class="shot-display" id="extDisplayA">30</span>
+                <button class="shot-btn" id="extPlusA">+</button>
+              </div>
+            </div>
+            <div class="shot-row">
+              <span class="shot-row-label">2P</span>
+              <div class="shot-row-controls">
+                <button class="shot-btn" id="extMinusB">-</button>
+                <span class="shot-display" id="extDisplayB">30</span>
+                <button class="shot-btn" id="extPlusB">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 持ち時間 -->
         <div class="modal-section">
           <div class="modal-section-title">持ち時間（分）</div>
           <div class="shot-settings">
             <div class="shot-row">
-              <span class="shot-row-label">P1 持ち時間</span>
+              <span class="shot-row-label">1P</span>
               <div class="shot-row-controls">
                 <button class="shot-btn" id="minutesMinusA">-</button>
                 <span class="shot-display" id="minutesDisplayA">20</span>
@@ -643,7 +661,7 @@
               </div>
             </div>
             <div class="shot-row">
-              <span class="shot-row-label">P2 持ち時間</span>
+              <span class="shot-row-label">2P</span>
               <div class="shot-row-controls">
                 <button class="shot-btn" id="minutesMinusB">-</button>
                 <span class="shot-display" id="minutesDisplayB">20</span>
@@ -681,6 +699,24 @@
 
     let soundEnabled = true;
 
+    // モード: 'standard' = 持ち時間あり, 'shot' = 最初からショットクロックのみ
+    let mode = 'standard';
+
+    // エクステンション秒数（1P / 2P 個別）
+    let extensionSecondsA = 30;
+    let extensionSecondsB = 30;
+
+    // エクステンション使用フラグ（各プレイヤー1回／ラックごと）
+    let extensionUsedA = false;
+    let extensionUsedB = false;
+
+    // 現在エクステンション時間中かどうか（点滅用）
+    let extensionActiveA = false;
+    let extensionActiveB = false;
+
+    // 合計スコアの最大値（これが増えた瞬間を「新ラック開始」とみなす）
+    let maxTotalScore = 0;
+
     const timeAEl = document.getElementById('timeA');
     const timeBEl = document.getElementById('timeB');
     const scoreAEl = document.getElementById('scoreA');
@@ -688,11 +724,17 @@
     const clockAEl = document.getElementById('clockA');
     const clockBEl = document.getElementById('clockB');
 
+    const extAEl = document.getElementById('extA');
+    const extBEl = document.getElementById('extB');
+
     const minutesDisplayAEl = document.getElementById('minutesDisplayA');
     const minutesDisplayBEl = document.getElementById('minutesDisplayB');
 
     const shotDisplayAEl = document.getElementById('shotDisplayA');
     const shotDisplayBEl = document.getElementById('shotDisplayB');
+
+    const extDisplayAEl = document.getElementById('extDisplayA');
+    const extDisplayBEl = document.getElementById('extDisplayB');
 
     const pauseBtn = document.getElementById('pauseBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -707,10 +749,18 @@
     const shotPlusBEl = document.getElementById('shotPlusB');
     const shotMinusBEl = document.getElementById('shotMinusB');
 
+    const extPlusAEl  = document.getElementById('extPlusA');
+    const extMinusAEl = document.getElementById('extMinusA');
+    const extPlusBEl  = document.getElementById('extPlusB');
+    const extMinusBEl = document.getElementById('extMinusB');
+
     const minutesPlusAEl = document.getElementById('minutesPlusA');
     const minutesMinusAEl = document.getElementById('minutesMinusA');
     const minutesPlusBEl = document.getElementById('minutesPlusB');
     const minutesMinusBEl = document.getElementById('minutesMinusB');
+
+    const modeStandardEl = document.getElementById('modeStandard');
+    const modeShotOnlyEl = document.getElementById('modeShotOnly');
 
     let audioCtx = null;
 
@@ -745,7 +795,6 @@
       }
     }
 
-    // タブが非表示になったら解除／戻ってきて動作中なら再取得
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         if (!gameOver && !isPaused && activePlayer !== null) {
@@ -800,14 +849,13 @@
     }
 
     function playShotEndBeep() {
-      playBeep(600, 0.8, 'sawtooth', 0.3); // ショットタイム0の「ビーーー」
+      playBeep(600, 0.8, 'sawtooth', 0.3);
     }
 
-    // ショットクロックモード突入時：ピ・ピ・ピ
     function playOvertimeStartBeep() {
       if (!soundEnabled) return;
 
-      const delays = [0, 150, 300]; // ms
+      const delays = [0, 150, 300];
 
       delays.forEach((d) => {
         setTimeout(() => {
@@ -816,20 +864,33 @@
       });
     }
 
+    function speakExtension() {
+      if (!soundEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+
+      try {
+        const utt = new SpeechSynthesisUtterance('エクステンション');
+        utt.lang = 'ja-JP';
+        utt.rate = 1.1;
+        utt.pitch = 1.0;
+        window.speechSynthesis.speak(utt);
+      } catch (e) {
+        console.warn('speech error:', e);
+      }
+    }
+
     function resizeFonts() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const base = Math.min(w, h);  // 画面の短い辺を基準にする
+      const base = Math.min(w, h);
 
       let timeSize, scoreSize;
       const labelSize = Math.max(11, base * 0.018);
 
       if (base <= 700) {
-        // スマホ用：文字をかなり大きく
         timeSize  = Math.max(40, base * 0.3);
-        scoreSize = Math.max(32, base * 0.2);
+        scoreSize = Math.max(32, base * 0.26);
       } else {
-        // PC など縦に余裕がある画面
         timeSize  = Math.max(48, base * 0.30);
         scoreSize = Math.max(36, base * 0.30);
       }
@@ -846,7 +907,22 @@
       return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
     }
 
+    function updateExtensionIndicators() {
+      if (extAEl) {
+        const usedButNotActiveA = extensionUsedA && !extensionActiveA;
+        extAEl.classList.toggle('used', usedButNotActiveA);
+        extAEl.classList.toggle('blink', extensionActiveA);
+      }
+      if (extBEl) {
+        const usedButNotActiveB = extensionUsedB && !extensionActiveB;
+        extBEl.classList.toggle('used', usedButNotActiveB);
+        extBEl.classList.toggle('blink', extensionActiveB);
+      }
+    }
+
     function updateDisplays() {
+      document.body.classList.toggle('shot-mode', mode === 'shot');
+
       const displayA = overtimeA ? shotTimeA : timeA;
       const displayB = overtimeB ? shotTimeB : timeB;
 
@@ -865,7 +941,6 @@
       timeAEl.classList.toggle('overtime', isOvertimeDisplayA);
       timeBEl.classList.toggle('overtime', isOvertimeDisplayB);
 
-      // ゼロになったプレイヤーは常に赤く（ゲームオーバー条件には依存しない）
       clockAEl.classList.toggle('finished', finishedA);
       clockBEl.classList.toggle('finished', finishedB);
 
@@ -880,21 +955,54 @@
       minutesDisplayBEl.textContent = initialMinutesB.toString();
       shotDisplayAEl.textContent = overtimeSecondsA.toString();
       shotDisplayBEl.textContent = overtimeSecondsB.toString();
+
+      if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+
+      updateExtensionIndicators();
     }
 
-    // 残り15秒で一回、その後 残り5〜1秒で毎秒ビープ
     function handleShotClockBeep(shotTime) {
       if (!soundEnabled) return;
 
-      // 15秒になった瞬間に一度
       if (shotTime === 15) {
         playShotWarningBeep();
       }
-
-      // 5〜1秒は毎秒
       if (shotTime <= 5 && shotTime > 0) {
         playShotWarningBeep();
       }
+    }
+
+    function handleShotZero(player) {
+      if (mode === 'shot') {
+        if (player === 'A') {
+          if (!extensionUsedA) {
+            extensionUsedA = true;
+            extensionActiveA = true;
+            shotTimeA = extensionSecondsA;
+            playOvertimeStartBeep();
+            speakExtension();
+          } else {
+            extensionActiveA = false;
+            playShotEndBeep();
+          }
+        } else {
+          if (!extensionUsedB) {
+            extensionUsedB = true;
+            extensionActiveB = true;
+            shotTimeB = extensionSecondsB;
+            playOvertimeStartBeep();
+            speakExtension();
+          } else {
+            extensionActiveB = false;
+            playShotEndBeep();
+          }
+        }
+      } else {
+        playShotEndBeep();
+      }
+
+      updateExtensionIndicators();
     }
 
     function clearTimer() {
@@ -908,7 +1016,6 @@
       clearTimer();
       if (!activePlayer || gameOver || isPaused) return;
 
-      // カウント開始とともにスリープ防止
       requestWakeLock();
 
       pauseBtn.classList.add('running');
@@ -932,14 +1039,11 @@
               }
             }
           } else {
-            // overtimeA 中のショットクロック
             if (shotTimeA > 0) {
               shotTimeA--;
               handleShotClockBeep(shotTimeA);
               if (shotTimeA === 0) {
-                // 0 になった瞬間だけ長いビーー音
-                playShotEndBeep();
-                // gameOver にしないので、00:00 でもクリックでターン交代可能
+                handleShotZero('A');
               }
             }
           }
@@ -959,7 +1063,7 @@
               shotTimeB--;
               handleShotClockBeep(shotTimeB);
               if (shotTimeB === 0) {
-                playShotEndBeep();
+                handleShotZero('B');
               }
             }
           }
@@ -972,36 +1076,56 @@
     function resetAll() {
       clearTimer();
       releaseWakeLock();
-      timeA = initialMinutesA * 60;
-      timeB = initialMinutesB * 60;
+
       scoreA = 0;
       scoreB = 0;
+      maxTotalScore = 0;
+
       overtimeA = false;
       overtimeB = false;
-      shotTimeA = overtimeSecondsA;
-      shotTimeB = overtimeSecondsB;
       activePlayer = null;
       gameOver = false;
       isPaused = false;
       pauseBtn.textContent = '一時停止';
       pauseBtn.classList.remove('running', 'paused');
+
+      extensionUsedA = false;
+      extensionUsedB = false;
+      extensionActiveA = false;
+      extensionActiveB = false;
+
+      if (mode === 'shot') {
+        timeA = 0;
+        timeB = 0;
+        overtimeA = true;
+        overtimeB = true;
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+      } else {
+        timeA = initialMinutesA * 60;
+        timeB = initialMinutesB * 60;
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+      }
+
       updateDisplays();
     }
 
     function switchTurn() {
       if (!activePlayer || gameOver) return;
 
-      // いま動いていた側のショットタイマーをリセット
       if (activePlayer === 'A' && overtimeA) {
         shotTimeA = overtimeSecondsA;
       } else if (activePlayer === 'B' && overtimeB) {
         shotTimeB = overtimeSecondsB;
       }
 
-      // 手番交代
+      // エクステ中の表示はそのショットで終了
+      extensionActiveA = false;
+      extensionActiveB = false;
+
       activePlayer = activePlayer === 'A' ? 'B' : 'A';
 
-      // 次のプレイヤーが既にオーバータイムなら、その人のショットタイマーもフルに
       if (activePlayer === 'A' && overtimeA) {
         shotTimeA = overtimeSecondsA;
       } else if (activePlayer === 'B' && overtimeB) {
@@ -1016,7 +1140,6 @@
 
       ensureAudioCtx();
 
-      // まだ誰も動いていないとき → 最初の手番スタート
       if (activePlayer === null && timerId === null) {
         activePlayer = player;
         if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
@@ -1026,7 +1149,6 @@
         return;
       }
 
-      // 現在の手番のプレイヤーだけがタップで交代できる
       if (activePlayer === player) {
         switchTurn();
       }
@@ -1035,7 +1157,23 @@
     clockAEl.addEventListener('click', () => handleClockClick('A'));
     clockBEl.addEventListener('click', () => handleClockClick('B'));
 
-    // スコアボタン
+    function handleRackChange(delta) {
+      if (delta <= 0) return;
+
+      const total = scoreA + scoreB;
+      if (total > maxTotalScore) {
+        maxTotalScore = total;
+
+        if (mode === 'shot') {
+          extensionUsedA = false;
+          extensionUsedB = false;
+          extensionActiveA = false;
+          extensionActiveB = false;
+          updateExtensionIndicators();
+        }
+      }
+    }
+
     document.querySelectorAll('.score-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -1048,6 +1186,7 @@
           scoreB = Math.max(0, scoreB + delta);
         }
 
+        handleRackChange(delta);
         updateDisplays();
 
         if (delta > 0) {
@@ -1068,20 +1207,18 @@
       return (
         activePlayer !== null ||
         timerId !== null ||
-        overtimeA || overtimeB ||
         gameOver
       );
     }
 
     function applyMinutesToClocksIfNotStarted() {
-      if (!isGameStarted()) {
+      if (!isGameStarted() && mode === 'standard') {
         timeA = initialMinutesA * 60;
         timeB = initialMinutesB * 60;
         updateDisplays();
       }
     }
 
-    // 持ち時間＋−（P1）
     minutesPlusAEl.addEventListener('click', () => {
       if (initialMinutesA < 120) {
         initialMinutesA++;
@@ -1098,7 +1235,6 @@
       }
     });
 
-    // 持ち時間＋−（P2）
     minutesPlusBEl.addEventListener('click', () => {
       if (initialMinutesB < 120) {
         initialMinutesB++;
@@ -1115,13 +1251,67 @@
       }
     });
 
-    // 設定モーダル
+    function clampShotSeconds(sec) {
+      const min = 10;
+      const max = 90;
+      return Math.max(min, Math.min(max, sec));
+    }
+
+    function applyShotChange(player, delta) {
+      if (player === 'A') {
+        overtimeSecondsA = clampShotSeconds(overtimeSecondsA + delta);
+        shotDisplayAEl.textContent = overtimeSecondsA.toString();
+      } else {
+        overtimeSecondsB = clampShotSeconds(overtimeSecondsB + delta);
+        shotDisplayBEl.textContent = overtimeSecondsB.toString();
+      }
+
+      if (!isGameStarted()) {
+        shotTimeA = overtimeSecondsA;
+        shotTimeB = overtimeSecondsB;
+        if (mode === 'shot') {
+          updateDisplays();
+        }
+      }
+    }
+
+    shotPlusAEl.addEventListener('click', () => applyShotChange('A', 5));
+    shotMinusAEl.addEventListener('click', () => applyShotChange('A', -5));
+    shotPlusBEl.addEventListener('click', () => applyShotChange('B', 5));
+    shotMinusBEl.addEventListener('click', () => applyShotChange('B', -5));
+
+    function clampExtensionSeconds(sec) {
+      const min = 5;
+      const max = 120;
+      return Math.max(min, Math.min(max, sec));
+    }
+
+    function applyExtensionChange(player, delta) {
+      if (player === 'A') {
+        extensionSecondsA = clampExtensionSeconds(extensionSecondsA + delta);
+        if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      } else {
+        extensionSecondsB = clampExtensionSeconds(extensionSecondsB + delta);
+        if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+      }
+    }
+
+    extPlusAEl.addEventListener('click',  () => applyExtensionChange('A',  5));
+    extMinusAEl.addEventListener('click', () => applyExtensionChange('A', -5));
+    extPlusBEl.addEventListener('click',  () => applyExtensionChange('B',  5));
+    extMinusBEl.addEventListener('click', () => applyExtensionChange('B', -5));
+
     function syncSettingsUI() {
       soundToggle.checked = soundEnabled;
       shotDisplayAEl.textContent = overtimeSecondsA.toString();
       shotDisplayBEl.textContent = overtimeSecondsB.toString();
       minutesDisplayAEl.textContent = initialMinutesA.toString();
       minutesDisplayBEl.textContent = initialMinutesB.toString();
+      if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
+      if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
+
+      if (modeStandardEl) modeStandardEl.checked = (mode === 'standard');
+      if (modeShotOnlyEl) modeShotOnlyEl.checked = (mode === 'shot');
     }
 
     function openSettings() {
@@ -1144,39 +1334,26 @@
       soundEnabled = soundToggle.checked;
     });
 
-    function clampShotSeconds(sec) {
-      const min = 10;
-      const max = 90;
-      return Math.max(min, Math.min(max, sec));
-    }
-
-    function applyShotChange(player, delta) {
-      if (player === 'A') {
-        overtimeSecondsA = clampShotSeconds(overtimeSecondsA + delta);
-        shotDisplayAEl.textContent = overtimeSecondsA.toString();
-      } else {
-        overtimeSecondsB = clampShotSeconds(overtimeSecondsB + delta);
-        shotDisplayBEl.textContent = overtimeSecondsB.toString();
+    function applyModeFromUI() {
+      const oldMode = mode;
+      if (modeStandardEl && modeStandardEl.checked) {
+        mode = 'standard';
+      } else if (modeShotOnlyEl && modeShotOnlyEl.checked) {
+        mode = 'shot';
       }
-
-      if (!isGameStarted()) {
-        shotTimeA = overtimeSecondsA;
-        shotTimeB = overtimeSecondsB;
+      if (mode !== oldMode) {
+        resetAll();
       }
     }
 
-    shotPlusAEl.addEventListener('click', () => applyShotChange('A', 5));
-    shotMinusAEl.addEventListener('click', () => applyShotChange('A', -5));
-    shotPlusBEl.addEventListener('click', () => applyShotChange('B', 5));
-    shotMinusBEl.addEventListener('click', () => applyShotChange('B', -5));
+    if (modeStandardEl) modeStandardEl.addEventListener('change', applyModeFromUI);
+    if (modeShotOnlyEl) modeShotOnlyEl.addEventListener('change', applyModeFromUI);
 
-    // リセット
     resetBtn.addEventListener('click', () => {
       const ok = window.confirm('タイマーとスコアをすべてリセットします。\nよろしいですか？');
       if (ok) resetAll();
     });
 
-    // 一時停止
     pauseBtn.addEventListener('click', () => {
       if (gameOver) return;
       if (!isPaused) {
@@ -1190,11 +1367,10 @@
         isPaused = false;
         pauseBtn.textContent = '一時停止';
         pauseBtn.classList.remove('paused');
-        if (activePlayer !== null) startTimerLoop(); // 中で Wake Lock 再取得
+        if (activePlayer !== null) startTimerLoop();
       }
     });
 
-    // プレイヤーネーム編集
     document.querySelectorAll('.player-label').forEach(label => {
       label.addEventListener('click', e => e.stopPropagation());
       label.addEventListener('touchstart', e => e.stopPropagation());
@@ -1210,12 +1386,10 @@
     window.addEventListener('orientationchange', resizeFonts);
     window.addEventListener('load', resizeFonts);
 
-    // 初期化
     updateMinutesDisplay();
     resetAll();
     resizeFonts();
 
-        // PWA 用 Service Worker 登録
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
@@ -1225,10 +1399,6 @@
           });
       });
     }
-
   </script>
 </body>
 </html>
-
-
-
