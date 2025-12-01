@@ -937,32 +937,56 @@
       }
     }
 
+    // ★ 自動フィット版 resizeFonts
     function resizeFonts() {
+      const root = document.documentElement;
+      const app = document.querySelector('.app');
+      if (!app) return;
+
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const shortSide = Math.min(w, h);   // 画面の短い辺
+      const shortSide = Math.min(w, h);
+
+      // ラベルは画面サイズだけで決める
       const labelSize = Math.max(11, shortSide * 0.018);
 
-      let timeSize;
-      let scoreSize;
-
-      if (h <= 520) {
-        // 高さがかなり低い（スマホ横など）のときだけ強めに縮小
+      // まず「確実に収まる」ベース値を計算（スマホと大きい画面で分岐）
+      let timeSize, scoreSize;
+      if (shortSide <= 700) {
+        // スマホ・小型タブレット
         timeSize  = Math.max(36, shortSide * 0.22);
         scoreSize = Math.max(28, shortSide * 0.16);
-      } else if (shortSide <= 700) {
-        // スマホ縦・小さめタブレット：以前に近いサイズ
-        timeSize  = Math.max(40, shortSide * 0.30);
-        scoreSize = Math.max(32, shortSide * 0.22);
       } else {
         // 大きめタブレット・PC
-        timeSize  = Math.max(48, shortSide * 0.30);
-        scoreSize = Math.max(36, shortSide * 0.30);
+        timeSize  = Math.max(48, shortSide * 0.26);
+        scoreSize = Math.max(36, shortSide * 0.20);
       }
 
-      document.documentElement.style.setProperty('--time-size',  `${timeSize}px`);
-      document.documentElement.style.setProperty('--score-size', `${scoreSize}px`);
-      document.documentElement.style.setProperty('--label-size', `${labelSize}px`);
+      root.style.setProperty('--label-size', `${labelSize}px`);
+      root.style.setProperty('--time-size',  `${timeSize}px`);
+      root.style.setProperty('--score-size', `${scoreSize}px`);
+
+      // ここから「はみ出さない範囲で」少しずつ拡大
+      const timeStep  = 2;      // TIME を1回で増やす量(px)
+      const scoreStep = 1.4;    // SCORE は TIME より少し控えめ
+      const maxSteps  = 40;     // 無限ループ防止（最大80px拡大）
+
+      for (let i = 0; i < maxSteps; i++) {
+        timeSize  += timeStep;
+        scoreSize += scoreStep;
+        root.style.setProperty('--time-size',  `${timeSize}px`);
+        root.style.setProperty('--score-size', `${scoreSize}px`);
+
+        // 高さがオーバーしたら1ステップ戻して終了
+        const overflow = document.body.scrollHeight > window.innerHeight + 1;
+        if (overflow) {
+          timeSize  -= timeStep;
+          scoreSize -= scoreStep;
+          root.style.setProperty('--time-size',  `${timeSize}px`);
+          root.style.setProperty('--score-size', `${scoreSize}px`);
+          break;
+        }
+      }
     }
 
     function formatTime(sec) {
