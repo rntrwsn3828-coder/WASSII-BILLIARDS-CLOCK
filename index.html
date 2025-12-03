@@ -44,7 +44,7 @@
 
     /* ブラウザタブで開いているときにだけ付けるクラス */
     body.browser-mode {
-      min-height: 120vh;  /* 少しだけ縦長にしてアドレスバー非表示を誘発 */
+      min-height: 120vh;
     }
 
     .app {
@@ -125,6 +125,19 @@
 
     .clock.finished .time { color: var(--danger); }
 
+    /* ラック準備中：タイムゾーン全体を発光させる */
+    .clock.racking {
+      background: #201300;
+      box-shadow:
+        0 0 0 3px #ffc107,
+        0 0 40px rgba(255, 193, 7, 0.95),
+        0 0 90px rgba(255, 160, 0, 0.9);
+    }
+
+    .clock.racking .time {
+      color: #ffd54f;
+    }
+
     .clock-header {
       display: flex;
       justify-content: space-between;
@@ -204,7 +217,7 @@
       letter-spacing: 0.14em;
       text-transform: uppercase;
       box-shadow: 0 0 10px rgba(76, 175, 80, 0.85);
-      display: inline-flex;   /* ← 常時表示（JS側でON/OFF制御） */
+      display: inline-flex;
       white-space: nowrap;
     }
 
@@ -237,6 +250,67 @@
         box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
         transform: scale(1);
       }
+    }
+
+    /* ▼ ラック準備ボタン（ヘッダー内、色付きで大きめ） */
+    .rack-btn {
+      font-size: clamp(0.8rem, 1.9vh, 1.05rem);
+      padding: 4px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 193, 7, 0.95);
+      background: linear-gradient(135deg, #ffc107, #ff9800);
+      color: #000;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+      margin-left: 4px;
+      box-shadow:
+        0 0 6px rgba(255, 193, 7, 0.8),
+        0 0 14px rgba(255, 160, 0, 0.9);
+    }
+
+    .rack-btn.hidden {
+      display: none;
+    }
+
+    .rack-btn:active {
+      transform: scale(0.96);
+      filter: brightness(1.05);
+    }
+    /* ▲ ラック準備ボタン */
+
+    /* ラック準備中オーバーレイ（該当プレイヤーのパネル全体） */
+    .rack-status {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .clock.racking .rack-status {
+      display: flex;
+    }
+
+    .rack-status-inner {
+      padding: 6px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      background:
+        radial-gradient(circle at center,
+          rgba(255, 255, 255, 0.65),
+          rgba(255, 152, 0, 0.98));
+      color: #000;
+      font-size: clamp(0.85rem, 2vh, 1.05rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      box-shadow:
+        0 0 30px rgba(255, 255, 255, 1),
+        0 0 80px rgba(255, 193, 7, 1);
+      opacity: 0.98;
     }
 
     /* TIME/SCORE は JS が設定する CSS変数ベース */
@@ -614,6 +688,7 @@
             <div class="header-left">
               <div class="player-label" contenteditable="true">PLAYER 1</div>
               <div class="ext-indicator" id="extA">EXTENSION</div>
+              <button class="rack-btn hidden" data-player="A" id="rackBtnA">ラック準備</button>
             </div>
             <div class="turn-indicator">
               <span class="turn-dot"></span>
@@ -632,6 +707,11 @@
               <button class="score-btn" data-player="A" data-delta="1">+</button>
             </div>
           </div>
+
+          <!-- ラック準備中表示（PLAYER1側） -->
+          <div class="rack-status">
+            <div class="rack-status-inner">ラック準備中</div>
+          </div>
         </div>
 
         <div class="clock" data-player="B" id="clockB">
@@ -639,6 +719,7 @@
             <div class="header-left">
               <div class="player-label" contenteditable="true">PLAYER 2</div>
               <div class="ext-indicator" id="extB">EXTENSION</div>
+              <button class="rack-btn hidden" data-player="B" id="rackBtnB">ラック準備</button>
             </div>
             <div class="turn-indicator">
               <span class="turn-dot"></span>
@@ -656,6 +737,11 @@
               <div class="score" id="scoreB">0</div>
               <button class="score-btn" data-player="B" data-delta="1">+</button>
             </div>
+          </div>
+
+          <!-- ラック準備中表示（PLAYER2側） -->
+          <div class="rack-status">
+            <div class="rack-status-inner">RACKING / ラック準備中</div>
           </div>
         </div>
       </section>
@@ -805,7 +891,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.9';
+    const APP_VERSION = 'v0.9.11';
 
     // 共通 clamp
     function clamp(value, min, max) {
@@ -852,6 +938,10 @@
     let isPaused = false;
 
     let soundEnabled = true;
+
+    // ラック間フラグ＋どちらがラック準備しているか
+    let isBetweenRacks = false;
+    let rackPlayer = null; // 'A' / 'B' / null
 
     // モード: 'standard' = 持ち時間あり, 'shot' = 最初からショットクロックのみ
     let mode = 'standard';
@@ -921,6 +1011,9 @@
 
     const extensionEnabledToggle = document.getElementById('extensionEnabledToggle');
 
+    const rackBtnA = document.getElementById('rackBtnA');
+    const rackBtnB = document.getElementById('rackBtnB');
+
     let audioCtx = null;
 
     // ===== Speech Synthesis（音声合成） =====
@@ -941,7 +1034,6 @@
       initVoices();
       window.speechSynthesis.addEventListener('voiceschanged', initVoices);
 
-      // 初回ユーザー操作で resume（モバイルでのブロック対策）
       document.addEventListener('click', () => {
         try {
           window.speechSynthesis.resume();
@@ -972,7 +1064,6 @@
           console.log('[WakeLock] released.');
           wakeLock = null;
 
-          // 解放されたが、まだ試合中で画面が見えていれば再度取りにいく
           if (!document.hidden && !gameOver && !isPaused && activePlayer !== null) {
             requestWakeLock();
           }
@@ -994,7 +1085,6 @@
       }
     }
 
-    // タブの可視状態が変わったとき
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         if (!gameOver && !isPaused && activePlayer !== null) {
@@ -1094,7 +1184,7 @@
       }
     }
 
-    // ===== レイアウト基準でのフォント自動調整（横向き専用） =====
+    // ===== レイアウト基準でのフォント自動調整 =====
     function resizeFonts() {
       const root = document.documentElement;
 
@@ -1104,7 +1194,6 @@
         ? window.visualViewport.height
         : vh;
 
-      // 横向き前提の基準値（画面全体スケール用）
       const designW    = 1280;
       const designH    = 800;
       const designTime = 170;
@@ -1126,7 +1215,6 @@
         let   scoreSize      = clamp(designScore * s, 28, 180);
         let   labelSize      = clamp(designLabel * s, 11, 22);
 
-        // 「タップゾーン（.clock）の幅」に合わせて TIME をフィット
         try {
           if (clockAEl && timeAEl) {
             const clockRect      = clockAEl.getBoundingClientRect();
@@ -1145,12 +1233,12 @@
                   return ctx.measureText('20:00').width;
                 };
 
-                const marginRatio = 0.96;  // タップゾーン幅の96%まで使う
+                const marginRatio = 0.96;
                 const maxWidth    = containerWidth * marginRatio;
                 const widthAtBase = measureForSize(baseTimeSize);
 
                 if (widthAtBase > 0 && maxWidth > 0) {
-                  let ratio = maxWidth / widthAtBase; // >1なら拡大してよい
+                  let ratio = maxWidth / widthAtBase;
 
                   const RATIO_MIN = 0.5;
                   const RATIO_MAX = 1.6;
@@ -1167,7 +1255,6 @@
           }
         } catch (e) {
           console.warn('resizeFonts fit error:', e);
-          timeSize  = baseTimeSize;
         }
 
         root.style.setProperty('--time-size',  `${timeSize}px`);
@@ -1179,7 +1266,6 @@
 
       scale = applyScale(scale);
 
-      // 下部ボタンがはみ出していたら全体スケールを微調整
       const bottom = document.querySelector('.bottom-controls');
       if (bottom) {
         const rect = bottom.getBoundingClientRect();
@@ -1193,7 +1279,6 @@
       }
     }
 
-    // 縦／横で UI 切り替え
     function updateOrientationUI() {
       const vw = window.innerWidth  || document.documentElement.clientWidth;
       const vh = window.innerHeight || document.documentElement.clientHeight;
@@ -1247,6 +1332,17 @@
       }
     }
 
+    function updateRackButtons() {
+      if (rackBtnA) {
+        const showA = (mode === 'shot') || overtimeA;
+        rackBtnA.classList.toggle('hidden', !showA);
+      }
+      if (rackBtnB) {
+        const showB = (mode === 'shot') || overtimeB;
+        rackBtnB.classList.toggle('hidden', !showB);
+      }
+    }
+
     function updateDisplays() {
       document.body.classList.toggle('shot-mode', mode === 'shot');
 
@@ -1278,6 +1374,10 @@
         else if (activePlayer === 'B') clockBEl.classList.add('active');
       }
 
+      // ラック準備中の発光は「ラック担当のプレイヤー側」だけ
+      clockAEl.classList.toggle('racking', isBetweenRacks && rackPlayer === 'A');
+      clockBEl.classList.toggle('racking', isBetweenRacks && rackPlayer === 'B');
+
       minutesDisplayAEl.textContent = initialMinutesA.toString();
       minutesDisplayBEl.textContent = initialMinutesB.toString();
       shotDisplayAEl.textContent = overtimeSecondsA.toString();
@@ -1286,6 +1386,7 @@
       if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
       if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
 
+      updateRackButtons();
       updateExtensionIndicators();
     }
 
@@ -1302,7 +1403,6 @@
     }
 
     function handleShotZero(player) {
-      // 設定でエクステンションONのときだけ、モード問わずエクステンション処理
       if (extensionEnabled) {
         if (player === 'A') {
           if (!extensionUsedA) {
@@ -1345,7 +1445,7 @@
 
     function startTimerLoop() {
       clearTimer();
-      if (!activePlayer || gameOver || isPaused) return;
+      if (!activePlayer || gameOver || isPaused || isBetweenRacks) return;
 
       requestWakeLock();
 
@@ -1353,7 +1453,7 @@
       pauseBtn.classList.remove('paused');
 
       timerId = setInterval(() => {
-        if (gameOver || !activePlayer || isPaused) {
+        if (gameOver || !activePlayer || isPaused || isBetweenRacks) {
           clearTimer();
           return;
         }
@@ -1416,6 +1516,8 @@
       activePlayer = null;
       gameOver = false;
       isPaused = false;
+      isBetweenRacks = false;
+      rackPlayer = null;
       pauseBtn.textContent = '一時停止';
       pauseBtn.classList.remove('running', 'paused');
 
@@ -1464,11 +1566,64 @@
       updateDisplays();
     }
 
+    // ラック準備ボタン押下
+    function handleRackPrepClick(player) {
+      if (gameOver) return;
+      if (isBetweenRacks) return;
+
+      clearTimer();
+      isBetweenRacks = true;
+      rackPlayer = player;
+      activePlayer = null;
+
+      extensionActiveA = false;
+      extensionActiveB = false;
+      updateExtensionIndicators();
+
+      isPaused = false;
+      pauseBtn.textContent = '一時停止';
+      pauseBtn.classList.remove('running', 'paused');
+
+      updateDisplays();
+    }
+
     function handleClockClick(player) {
       if (gameOver || isPaused) return;
 
       ensureAudioCtx();
 
+      // ラック準備中 → ラック担当プレイヤーだけが再開できる
+      if (isBetweenRacks) {
+        if (player !== rackPlayer) return;
+
+        isBetweenRacks = false;
+        const resumePlayer = rackPlayer;
+        rackPlayer = null;
+        activePlayer = resumePlayer;
+
+        if (mode === 'shot') {
+          if (activePlayer === 'A') {
+            shotTimeA = overtimeSecondsA;
+          } else {
+            shotTimeB = overtimeSecondsB;
+          }
+        } else {
+          if (activePlayer === 'A' && overtimeA) {
+            shotTimeA = overtimeSecondsA;
+          } else if (activePlayer === 'B' && overtimeB) {
+            shotTimeB = overtimeSecondsB;
+          }
+        }
+
+        extensionActiveA = false;
+        extensionActiveB = false;
+        updateExtensionIndicators();
+        updateDisplays();
+        startTimerLoop();
+        return;
+      }
+
+      // 通常の開始／交代
       if (activePlayer === null && timerId === null) {
         activePlayer = player;
         if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
@@ -1486,6 +1641,19 @@
     clockAEl.addEventListener('click', () => handleClockClick('A'));
     clockBEl.addEventListener('click', () => handleClockClick('B'));
 
+    if (rackBtnA) {
+      rackBtnA.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleRackPrepClick('A');
+      });
+    }
+    if (rackBtnB) {
+      rackBtnB.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleRackPrepClick('B');
+      });
+    }
+
     function handleRackChange(delta) {
       if (delta <= 0) return;
 
@@ -1493,7 +1661,6 @@
       if (total > maxTotalScore) {
         maxTotalScore = total;
 
-        // エクステンションが有効な場合は、モードに関係なく「新ラック」で1回ぶんリセット
         if (extensionEnabled) {
           extensionUsedA = false;
           extensionUsedB = false;
@@ -1710,12 +1877,11 @@
         pauseBtn.textContent = '再開';
         pauseBtn.classList.remove('running');
         pauseBtn.classList.add('paused');
-        // Wake Lock は維持
       } else {
         isPaused = false;
         pauseBtn.textContent = '一時停止';
         pauseBtn.classList.remove('paused');
-        if (activePlayer !== null) startTimerLoop();
+        if (activePlayer !== null && !isBetweenRacks) startTimerLoop();
       }
     });
 
@@ -1730,7 +1896,6 @@
       });
     });
 
-    // 画面サイズ変化時：向き判定＋フォント調整
     window.addEventListener('resize', () => {
       updateOrientationUI();
     });
@@ -1748,7 +1913,6 @@
       updateOrientationUI();
       setTimeout(updateOrientationUI, 300);
 
-      // ブラウザタブで開いているときだけ、アドレスバーを隠しやすくする
       if (!isStandaloneMode()) {
         document.body.classList.add('browser-mode');
         setTimeout(() => {
@@ -1773,4 +1937,3 @@
   </script>
 </body>
 </html>
-
