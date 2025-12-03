@@ -333,6 +333,8 @@
       opacity: 0.7;
       text-align: center;
       margin-bottom: 2px;
+      /* SCOREの文字だけ消す */
+      display: none;
     }
 
     .score-row {
@@ -686,7 +688,6 @@
         <div class="clock" data-player="A" id="clockA">
           <div class="clock-header">
             <div class="header-left">
-              <div class="player-label" contenteditable="true">PLAYER 1</div>
               <div class="ext-indicator" id="extA">EXTENSION</div>
               <button class="rack-btn hidden" data-player="A" id="rackBtnA">ラック準備</button>
             </div>
@@ -696,6 +697,7 @@
             </div>
           </div>
           <div class="time-block">
+            <div class="player-label" contenteditable="true">PLAYER 1</div>
             <div class="time" id="timeA">20:00</div>
           </div>
 
@@ -717,7 +719,6 @@
         <div class="clock" data-player="B" id="clockB">
           <div class="clock-header">
             <div class="header-left">
-              <div class="player-label" contenteditable="true">PLAYER 2</div>
               <div class="ext-indicator" id="extB">EXTENSION</div>
               <button class="rack-btn hidden" data-player="B" id="rackBtnB">ラック準備</button>
             </div>
@@ -727,6 +728,7 @@
             </div>
           </div>
           <div class="time-block">
+            <div class="player-label" contenteditable="true">PLAYER 2</div>
             <div class="time" id="timeB">20:00</div>
           </div>
 
