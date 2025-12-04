@@ -893,7 +893,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.22';
+    const APP_VERSION = 'v0.9.25';
 
     // 共通 clamp
     function clamp(value, min, max) {
@@ -962,9 +962,6 @@
     // 現在エクステンション時間中かどうか（点滅用）
     let extensionActiveA = false;
     let extensionActiveB = false;
-
-    // 合計スコアの最大値（これが増えた瞬間を「新ラック開始」とみなす）
-    let maxTotalScore = 0;
 
     const timeAEl = document.getElementById('timeA');
     const timeBEl = document.getElementById('timeB');
@@ -1511,7 +1508,6 @@
 
       scoreA = 0;
       scoreB = 0;
-      maxTotalScore = 0;
 
       overtimeA = false;
       overtimeB = false;
@@ -1578,6 +1574,11 @@
       rackPlayer = player;
       activePlayer = null;
 
+      // ★ ラック準備＝新ラック扱い：エクステンション権利をここで復活
+      if (extensionEnabled) {
+        extensionUsedA = false;
+        extensionUsedB = false;
+      }
       extensionActiveA = false;
       extensionActiveB = false;
       updateExtensionIndicators();
@@ -1656,23 +1657,7 @@
       });
     }
 
-    function handleRackChange(delta) {
-      if (delta <= 0) return;
-
-      const total = scoreA + scoreB;
-      if (total > maxTotalScore) {
-        maxTotalScore = total;
-
-        if (extensionEnabled) {
-          extensionUsedA = false;
-          extensionUsedB = false;
-          extensionActiveA = false;
-          extensionActiveB = false;
-          updateExtensionIndicators();
-        }
-      }
-    }
-
+    // スコアボタン（エクステンション権利には一切触れない）
     document.querySelectorAll('.score-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -1685,7 +1670,6 @@
           scoreB = Math.max(0, scoreB + delta);
         }
 
-        handleRackChange(delta);
         updateDisplays();
 
         if (delta > 0) {
