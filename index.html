@@ -204,6 +204,41 @@
       padding: 4px 0;
     }
 
+    /* ===== 交代ボタン領域（ショットクロック時のみ、非アクティブ側に表示） ===== */
+    .switch-area {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 22%;
+      bottom: 22%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.18);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: clamp(1.2rem, 3.4vh, 2.2rem);
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      user-select: none;
+      z-index: 3;
+      cursor: pointer;
+      touch-action: manipulation;
+      backdrop-filter: blur(1.5px);
+    }
+
+    .clock.shot-inactive .switch-area {
+      display: flex;
+    }
+
+    .switch-area:active {
+      transform: scale(0.985);
+      filter: brightness(1.05);
+    }
+    /* ===== /交代ボタン領域 ===== */
+
     /* EXTENSION バッジ */
     .ext-indicator {
       font-size: clamp(0.8rem, 1.6vh, 1.0rem);
@@ -675,6 +710,13 @@
         align-items: flex-start;
         padding-top: 8px;
       }
+
+      .switch-area{
+        left: 8px;
+        right: 8px;
+        top: 20%;
+        bottom: 20%;
+      }
     }
 
     /* 縦向きのときに表示するオーバーレイ */
@@ -714,6 +756,9 @@
     <main class="main">
       <section class="clocks">
         <div class="clock" data-player="A" id="clockA">
+          <!-- 交代ボタン領域（ショットクロック時のみ、非アクティブ側に出る） -->
+          <div class="switch-area" id="switchAreaA"></div>
+
           <div class="clock-header">
             <div class="header-left">
               <div class="ext-indicator" id="extA">EXTENSION</div>
@@ -751,6 +796,9 @@
         </div>
 
         <div class="clock" data-player="B" id="clockB">
+          <!-- 交代ボタン領域（ショットクロック時のみ、非アクティブ側に出る） -->
+          <div class="switch-area" id="switchAreaB">交代</div>
+
           <div class="clock-header">
             <div class="header-left">
               <div class="ext-indicator" id="extB">EXTENSION</div>
@@ -933,7 +981,7 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.25';
+    const APP_VERSION = 'v0.9.26';
 
     // 共通 clamp
     function clamp(value, min, max) {
@@ -1012,6 +1060,9 @@
 
     const extAEl = document.getElementById('extA');
     const extBEl = document.getElementById('extB');
+
+    const switchAreaAEl = document.getElementById('switchAreaA');
+    const switchAreaBEl = document.getElementById('switchAreaB');
 
     const minutesDisplayAEl = document.getElementById('minutesDisplayA');
     const minutesDisplayBEl = document.getElementById('minutesDisplayB');
@@ -1382,6 +1433,31 @@
       }
     }
 
+    // 「いまのアクティブプレイヤーがショットクロック運用中か？」
+    function isActiveInShotPhase() {
+      if (!activePlayer) return false;
+      if (mode === 'shot') return true;
+      if (activePlayer === 'A' && overtimeA) return true;
+      if (activePlayer === 'B' && overtimeB) return true;
+      return false;
+    }
+
+    // ショットクロック中のUI（非アクティブ側に交代領域を出す）
+    function updateShotSwitchAreaUI() {
+      const enabled = isActiveInShotPhase() && !gameOver && !isPaused && !isBetweenRacks;
+
+      clockAEl.classList.remove('shot-inactive');
+      clockBEl.classList.remove('shot-inactive');
+
+      if (!enabled) return;
+
+      if (activePlayer === 'A') {
+        clockBEl.classList.add('shot-inactive');
+      } else if (activePlayer === 'B') {
+        clockAEl.classList.add('shot-inactive');
+      }
+    }
+
     function updateDisplays() {
       document.body.classList.toggle('shot-mode', mode === 'shot');
 
@@ -1427,6 +1503,7 @@
 
       updateRackButtons();
       updateExtensionIndicators();
+      updateShotSwitchAreaUI();
     }
 
     // ===== タイマー系 =====
@@ -1584,6 +1661,7 @@
     function switchTurn() {
       if (!activePlayer || gameOver) return;
 
+      // 交代前：今のアクティブがショット中なら次に備えてベースに戻しておく
       if (activePlayer === 'A' && overtimeA) {
         shotTimeA = overtimeSecondsA;
       } else if (activePlayer === 'B' && overtimeB) {
@@ -1595,12 +1673,25 @@
 
       activePlayer = activePlayer === 'A' ? 'B' : 'A';
 
+      // 交代後：新アクティブがショット中ならベースへ
       if (activePlayer === 'A' && overtimeA) {
         shotTimeA = overtimeSecondsA;
       } else if (activePlayer === 'B' && overtimeB) {
         shotTimeB = overtimeSecondsB;
       }
 
+      updateDisplays();
+    }
+
+    // 成功時：交代せず「ショットクロックだけ」リセット（持ち時間は触らない）
+    function resetShotClockKeepTurn(player) {
+      if (player === 'A') {
+        shotTimeA = overtimeSecondsA;
+        extensionActiveA = false;
+      } else {
+        shotTimeB = overtimeSecondsB;
+        extensionActiveB = false;
+      }
       updateDisplays();
     }
 
@@ -1666,7 +1757,7 @@
         return;
       }
 
-      // 通常の開始／交代
+      // 通常の開始
       if (activePlayer === null && timerId === null) {
         activePlayer = player;
         if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
@@ -1676,13 +1767,53 @@
         return;
       }
 
+      // ★ここが変更点：
+      // ショットクロック運用中は「アクティブ側タップ＝継続リセット」。
+      // 交代は相手側の「交代領域」からのみ行う。
       if (activePlayer === player) {
-        switchTurn();
+        if (isActiveInShotPhase()) {
+          resetShotClockKeepTurn(player);
+          return;
+        } else {
+          switchTurn();
+          return;
+        }
       }
+
+      // 非アクティブ側タップは基本なにもしない（誤タップ対策）
     }
 
     clockAEl.addEventListener('click', () => handleClockClick('A'));
     clockBEl.addEventListener('click', () => handleClockClick('B'));
+
+    // 交代領域：ショットクロック運用中のみ有効（非アクティブ側にだけ出る）
+    function handleSwitchAreaClick(targetPlayer) {
+      // targetPlayer = 'A' or 'B' （この領域を押すとターンが targetPlayer になる）
+      if (gameOver || isPaused) return;
+      if (!activePlayer) return;
+      if (!isActiveInShotPhase()) return;
+      if (isBetweenRacks) return;
+
+      if (targetPlayer === activePlayer) return; // アクティブ側の交代領域はそもそも表示されないが保険
+      switchTurn();
+      // タイマーは回っているはずだが、念のため
+      if (timerId === null) startTimerLoop();
+    }
+
+    if (switchAreaAEl) {
+      switchAreaAEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleSwitchAreaClick('A');
+      });
+      switchAreaAEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    }
+    if (switchAreaBEl) {
+      switchAreaBEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleSwitchAreaClick('B');
+      });
+      switchAreaBEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    }
 
     if (rackBtnA) {
       rackBtnA.addEventListener('click', (e) => {
