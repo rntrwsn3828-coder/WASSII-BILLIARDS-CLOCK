@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -215,27 +215,42 @@
       align-items: center;
       justify-content: center;
       border-radius: 18px;
-      border: 2px solid rgba(255, 255, 255, 0.35);
-      background: rgba(0, 0, 0, 0.18);
-      color: rgba(255, 255, 255, 0.88);
-      font-size: clamp(1.2rem, 3.4vh, 2.2rem);
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
+      border: 2px solid rgba(255, 255, 255, 0.38);
+      background: rgba(0, 0, 0, 0.42); /* ← 背景を濃くしてタイムとの被りを解消 */
       user-select: none;
       z-index: 3;
       cursor: pointer;
       touch-action: manipulation;
-      backdrop-filter: blur(1.5px);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
     }
 
     .clock.shot-inactive .switch-area {
       display: flex;
     }
 
+    /* 文字は“札”として独立させて視認性を上げる */
+    .switch-label {
+      padding: 10px 22px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.70);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(1.2rem, 3.4vh, 2.2rem);
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.85),
+        0 0 18px rgba(0, 0, 0, 0.85);
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.55),
+        0 0 0 2px rgba(0, 0, 0, 0.55) inset;
+    }
+
     .switch-area:active {
       transform: scale(0.985);
-      filter: brightness(1.05);
+      filter: brightness(1.07);
     }
     /* ===== /交代ボタン領域 ===== */
 
@@ -270,21 +285,9 @@
     }
 
     @keyframes extBlink {
-      0% {
-        opacity: 1;
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
-        transform: scale(1);
-      }
-      50% {
-        opacity: 1;
-        box-shadow: 0 0 22px rgba(144, 238, 144, 1);
-        transform: scale(1.06);
-      }
-      100% {
-        opacity: 1;
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.7);
-        transform: scale(1);
-      }
+      0% { opacity: 1; box-shadow: 0 0 8px rgba(76, 175, 80, 0.7); transform: scale(1); }
+      50% { opacity: 1; box-shadow: 0 0 22px rgba(144, 238, 144, 1); transform: scale(1.06); }
+      100% { opacity: 1; box-shadow: 0 0 8px rgba(76, 175, 80, 0.7); transform: scale(1); }
     }
 
     /* ▼ ラック準備ボタン（ヘッダー内、色付きで大きめ） */
@@ -304,9 +307,7 @@
         0 0 14px rgba(255, 160, 0, 0.9);
     }
 
-    .rack-btn.hidden {
-      display: none;
-    }
+    .rack-btn.hidden { display: none; }
 
     .rack-btn:active {
       transform: scale(0.96);
@@ -325,9 +326,7 @@
       z-index: 2;
     }
 
-    .clock.racking .rack-status {
-      display: flex;
-    }
+    .clock.racking .rack-status { display: flex; }
 
     .rack-status-inner {
       padding: 6px 18px;
@@ -368,8 +367,7 @@
       opacity: 0.7;
       text-align: center;
       margin-bottom: 2px;
-      /* SCOREの文字だけ消す */
-      display: none;
+      display: none; /* SCOREの文字だけ消す */
     }
 
     /* スコア行：3分割（- ／ SCORE ／ +） */
@@ -389,21 +387,18 @@
       overflow: hidden;
     }
 
-    /* − 側：danger系のうっすら赤みグレー */
     .score-cell-minus {
       background: rgba(192, 57, 43, 0.22);
       border: 1px solid rgba(192, 57, 43, 0.45);
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.75);
     }
 
-    /* ＋ 側：accent系のうっすら緑みグレー */
     .score-cell-plus {
       background: rgba(63, 163, 77, 0.22);
       border: 1px solid rgba(63, 163, 77, 0.45);
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.75);
     }
 
-    /* 中央スコア表示：うっすら暗く */
     .score-cell-display {
       background: rgba(0, 0, 0, 0.50);
       border-radius: 14px;
@@ -418,9 +413,7 @@
       font-weight: 600;
     }
 
-    .score-hit {
-      animation: scoreHit 0.28s ease-out;
-    }
+    .score-hit { animation: scoreHit 0.28s ease-out; }
 
     @keyframes scoreHit {
       0%   { transform: scale(1);   color: var(--text-main); text-shadow: none; }
@@ -442,9 +435,7 @@
       justify-content: center;
     }
 
-    .score-btn:active {
-      transform: scale(0.95);
-    }
+    .score-btn:active { transform: scale(0.95); }
 
     .bottom-controls {
       display: flex;
@@ -473,27 +464,13 @@
     #pauseBtn.running { background: #c0392b; }
     #pauseBtn.paused  { background: #2e7d32; }
 
-    #pauseBtn:active {
-      transform: scale(0.97);
-      filter: brightness(1.1);
-    }
+    #pauseBtn:active { transform: scale(0.97); filter: brightness(1.1); }
 
     #resetBtn { background: #444; color: #fff; }
+    #resetBtn:active { transform: scale(0.97); filter: brightness(1.1); }
 
-    #resetBtn:active {
-      transform: scale(0.97);
-      filter: brightness(1.1);
-    }
-
-    .btn-settings-main {
-      background: #333;
-      color: #f5f5f5;
-    }
-
-    .btn-settings-main:active {
-      transform: scale(0.97);
-      filter: brightness(1.1);
-    }
+    .btn-settings-main { background: #333; color: #f5f5f5; }
+    .btn-settings-main:active { transform: scale(0.97); filter: brightness(1.1); }
 
     .settings-modal-backdrop {
       position: fixed;
@@ -563,10 +540,7 @@
 
     .settings-row:last-child { border-bottom: none; }
 
-    .settings-label {
-      font-size: 0.85rem;
-      opacity: 0.85;
-    }
+    .settings-label { font-size: 0.85rem; opacity: 0.85; }
 
     .settings-toggle {
       display: inline-flex;
@@ -593,9 +567,7 @@
       gap: 8px;
     }
 
-    .shot-row-label {
-      font-size: 0.85rem;
-    }
+    .shot-row-label { font-size: 0.85rem; }
 
     .shot-row-controls {
       display: inline-flex;
@@ -648,75 +620,25 @@
 
     /* スマホなど幅が狭いときの微調整（横向き前提） */
     @media (max-width: 700px) {
-      .app {
-        padding: 6px;
-      }
-
-      .clock {
-        min-height: 30vh;
-        padding: 6px;
-      }
-
-      .buttons-row {
-        gap: 6px;
-      }
-
-      .btn-main {
-        font-size: 0.9rem;
-      }
+      .app { padding: 6px; }
+      .clock { min-height: 30vh; padding: 6px; }
+      .buttons-row { gap: 6px; }
+      .btn-main { font-size: 0.9rem; }
     }
 
     /* 高さが低い端末向け：余白圧縮 ＋ モーダル上寄せ */
     @media (max-height: 720px) {
-      .app {
-        padding-top: 4px;
-        padding-bottom: 4px;
-      }
-
-      .clocks {
-        gap: 4px;
-      }
-
-      .clock {
-        min-height: 28vh;
-        padding-top: 4px;
-        padding-bottom: 4px;
-      }
-
-      .time-block {
-        padding-top: 0;
-        padding-bottom: 0;
-      }
-
-      .score-block .field-caption {
-        margin-bottom: 0;
-      }
-
-      .bottom-controls {
-        margin-top: 0;
-      }
-
-      .buttons-row {
-        gap: 4px;
-      }
-
-      .ext-indicator {
-        font-size: 0.75rem;
-        padding: 1px 8px;
-        letter-spacing: 0.10em;
-      }
-
-      .settings-modal-backdrop {
-        align-items: flex-start;
-        padding-top: 8px;
-      }
-
-      .switch-area{
-        left: 8px;
-        right: 8px;
-        top: 20%;
-        bottom: 20%;
-      }
+      .app { padding-top: 4px; padding-bottom: 4px; }
+      .clocks { gap: 4px; }
+      .clock { min-height: 28vh; padding-top: 4px; padding-bottom: 4px; }
+      .time-block { padding-top: 0; padding-bottom: 0; }
+      .score-block .field-caption { margin-bottom: 0; }
+      .bottom-controls { margin-top: 0; }
+      .buttons-row { gap: 4px; }
+      .ext-indicator { font-size: 0.75rem; padding: 1px 8px; letter-spacing: 0.10em; }
+      .settings-modal-backdrop { align-items: flex-start; padding-top: 8px; }
+      .switch-area { left: 8px; right: 8px; top: 20%; bottom: 20%; }
+      .switch-label { padding: 8px 18px; }
     }
 
     /* 縦向きのときに表示するオーバーレイ */
@@ -757,7 +679,7 @@
       <section class="clocks">
         <div class="clock" data-player="A" id="clockA">
           <!-- 交代ボタン領域（ショットクロック時のみ、非アクティブ側に出る） -->
-          <div class="switch-area" id="switchAreaA"></div>
+          <div class="switch-area" id="switchAreaA"><div class="switch-label">交代</div></div>
 
           <div class="clock-header">
             <div class="header-left">
@@ -797,7 +719,7 @@
 
         <div class="clock" data-player="B" id="clockB">
           <!-- 交代ボタン領域（ショットクロック時のみ、非アクティブ側に出る） -->
-          <div class="switch-area" id="switchAreaB">交代</div>
+          <div class="switch-area" id="switchAreaB"><div class="switch-label">交代</div></div>
 
           <div class="clock-header">
             <div class="header-left">
@@ -981,9 +903,8 @@
   </div>
 
   <script>
-    const APP_VERSION = 'v0.9.26';
+    const APP_VERSION = 'v0.9.27';
 
-    // 共通 clamp
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
@@ -1125,11 +1046,7 @@
       window.speechSynthesis.addEventListener('voiceschanged', initVoices);
 
       document.addEventListener('click', () => {
-        try {
-          window.speechSynthesis.resume();
-        } catch (e) {
-          console.warn('speech resume error:', e);
-        }
+        try { window.speechSynthesis.resume(); } catch (e) { console.warn('speech resume error:', e); }
       }, { once: true });
     }
 
@@ -1141,10 +1058,7 @@
         console.log('[WakeLock] not supported on this browser.');
         return;
       }
-
-      if (wakeLock) {
-        return;
-      }
+      if (wakeLock) return;
 
       try {
         wakeLock = await navigator.wakeLock.request('screen');
@@ -1153,7 +1067,6 @@
         wakeLock.addEventListener('release', () => {
           console.log('[WakeLock] released.');
           wakeLock = null;
-
           if (!document.hidden && !gameOver && !isPaused && activePlayer !== null) {
             requestWakeLock();
           }
@@ -1177,9 +1090,7 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (!gameOver && !isPaused && activePlayer !== null) {
-          requestWakeLock();
-        }
+        if (!gameOver && !isPaused && activePlayer !== null) requestWakeLock();
       } else {
         releaseWakeLock();
       }
@@ -1190,9 +1101,7 @@
       try {
         if (!audioCtx) {
           const AC = window.AudioContext || window.webkitAudioContext;
-          if (AC) {
-            audioCtx = new AC();
-          }
+          if (AC) audioCtx = new AC();
         } else if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
@@ -1225,23 +1134,14 @@
       gain.gain.linearRampToValueAtTime(0.0001, now + duration);
     }
 
-    function playShotWarningBeep() {
-      playBeep(900, 0.12, 'square', 0.25);
-    }
-
-    function playShotEndBeep() {
-      playBeep(600, 0.8, 'sawtooth', 0.3);
-    }
+    function playShotWarningBeep() { playBeep(900, 0.12, 'square', 0.25); }
+    function playShotEndBeep() { playBeep(600, 0.8, 'sawtooth', 0.3); }
 
     function playOvertimeStartBeep() {
       if (!soundEnabled) return;
-
       const delays = [0, 150, 300];
-
       delays.forEach((d) => {
-        setTimeout(() => {
-          playBeep(900, 0.10, 'square', 0.25);
-        }, d);
+        setTimeout(() => { playBeep(900, 0.10, 'square', 0.25); }, d);
       });
     }
 
@@ -1262,12 +1162,7 @@
         utt.rate  = 1.05;
         utt.pitch = 1.0;
 
-        try {
-          window.speechSynthesis.cancel();
-        } catch (e) {
-          console.warn('speech cancel error:', e);
-        }
-
+        try { window.speechSynthesis.cancel(); } catch (e) { console.warn('speech cancel error:', e); }
         window.speechSynthesis.speak(utt);
       } catch (e) {
         console.warn('speech error:', e);
@@ -1329,10 +1224,7 @@
 
                 if (widthAtBase > 0 && maxWidth > 0) {
                   let ratio = maxWidth / widthAtBase;
-
-                  const RATIO_MIN = 0.5;
-                  const RATIO_MAX = 1.6;
-                  ratio = clamp(ratio, RATIO_MIN, RATIO_MAX);
+                  ratio = clamp(ratio, 0.5, 1.6);
 
                   timeSize = clamp(baseTimeSize * ratio, 34, 260);
                   const k  = timeSize / baseTimeSize;
@@ -1509,13 +1401,8 @@
     // ===== タイマー系 =====
     function handleShotClockBeep(shotTime) {
       if (!soundEnabled) return;
-
-      if (shotTime === 15) {
-        playShotWarningBeep();
-      }
-      if (shotTime <= 5 && shotTime > 0) {
-        playShotWarningBeep();
-      }
+      if (shotTime === 15) playShotWarningBeep();
+      if (shotTime <= 5 && shotTime > 0) playShotWarningBeep();
     }
 
     function handleShotZero(player) {
@@ -1589,9 +1476,7 @@
             if (shotTimeA > 0) {
               shotTimeA--;
               handleShotClockBeep(shotTimeA);
-              if (shotTimeA === 0) {
-                handleShotZero('A');
-              }
+              if (shotTimeA === 0) handleShotZero('A');
             }
           }
         } else if (activePlayer === 'B') {
@@ -1609,9 +1494,7 @@
             if (shotTimeB > 0) {
               shotTimeB--;
               handleShotClockBeep(shotTimeB);
-              if (shotTimeB === 0) {
-                handleShotZero('B');
-              }
+              if (shotTimeB === 0) handleShotZero('B');
             }
           }
         }
@@ -1662,11 +1545,8 @@
       if (!activePlayer || gameOver) return;
 
       // 交代前：今のアクティブがショット中なら次に備えてベースに戻しておく
-      if (activePlayer === 'A' && overtimeA) {
-        shotTimeA = overtimeSecondsA;
-      } else if (activePlayer === 'B' && overtimeB) {
-        shotTimeB = overtimeSecondsB;
-      }
+      if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
+      else if (activePlayer === 'B' && overtimeB) shotTimeB = overtimeSecondsB;
 
       extensionActiveA = false;
       extensionActiveB = false;
@@ -1674,11 +1554,8 @@
       activePlayer = activePlayer === 'A' ? 'B' : 'A';
 
       // 交代後：新アクティブがショット中ならベースへ
-      if (activePlayer === 'A' && overtimeA) {
-        shotTimeA = overtimeSecondsA;
-      } else if (activePlayer === 'B' && overtimeB) {
-        shotTimeB = overtimeSecondsB;
-      }
+      if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
+      else if (activePlayer === 'B' && overtimeB) shotTimeB = overtimeSecondsB;
 
       updateDisplays();
     }
@@ -1736,17 +1613,11 @@
         activePlayer = resumePlayer;
 
         if (mode === 'shot') {
-          if (activePlayer === 'A') {
-            shotTimeA = overtimeSecondsA;
-          } else {
-            shotTimeB = overtimeSecondsB;
-          }
+          if (activePlayer === 'A') shotTimeA = overtimeSecondsA;
+          else shotTimeB = overtimeSecondsB;
         } else {
-          if (activePlayer === 'A' && overtimeA) {
-            shotTimeA = overtimeSecondsA;
-          } else if (activePlayer === 'B' && overtimeB) {
-            shotTimeB = overtimeSecondsB;
-          }
+          if (activePlayer === 'A' && overtimeA) shotTimeA = overtimeSecondsA;
+          else if (activePlayer === 'B' && overtimeB) shotTimeB = overtimeSecondsB;
         }
 
         extensionActiveA = false;
@@ -1767,9 +1638,7 @@
         return;
       }
 
-      // ★ここが変更点：
-      // ショットクロック運用中は「アクティブ側タップ＝継続リセット」。
-      // 交代は相手側の「交代領域」からのみ行う。
+      // ショットクロック運用中は「アクティブ側タップ＝継続リセット」
       if (activePlayer === player) {
         if (isActiveInShotPhase()) {
           resetShotClockKeepTurn(player);
@@ -1788,15 +1657,13 @@
 
     // 交代領域：ショットクロック運用中のみ有効（非アクティブ側にだけ出る）
     function handleSwitchAreaClick(targetPlayer) {
-      // targetPlayer = 'A' or 'B' （この領域を押すとターンが targetPlayer になる）
       if (gameOver || isPaused) return;
       if (!activePlayer) return;
       if (!isActiveInShotPhase()) return;
       if (isBetweenRacks) return;
 
-      if (targetPlayer === activePlayer) return; // アクティブ側の交代領域はそもそも表示されないが保険
+      if (targetPlayer === activePlayer) return;
       switchTurn();
-      // タイマーは回っているはずだが、念のため
       if (timerId === null) startTimerLoop();
     }
 
@@ -1828,18 +1695,15 @@
       });
     }
 
-    // スコアボタン（エクステンション権利には一切触れない）
+    // スコアボタン
     document.querySelectorAll('.score-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
         const player = btn.dataset.player;
         const delta = parseInt(btn.dataset.delta, 10) || 0;
 
-        if (player === 'A') {
-          scoreA = Math.max(0, scoreA + delta);
-        } else {
-          scoreB = Math.max(0, scoreB + delta);
-        }
+        if (player === 'A') scoreA = Math.max(0, scoreA + delta);
+        else scoreB = Math.max(0, scoreB + delta);
 
         updateDisplays();
 
@@ -1852,7 +1716,7 @@
       });
     });
 
-    // スコア中央部分は「タッチしても何も起きない」ようにする（交代タップを防ぐ）
+    // スコア中央部分は「タッチしても何も起きない」
     document.querySelectorAll('.score-cell-display').forEach(cell => {
       cell.addEventListener('click', e => e.stopPropagation());
       cell.addEventListener('touchstart', e => e.stopPropagation());
@@ -1865,11 +1729,7 @@
     }
 
     function isGameStarted() {
-      return (
-        activePlayer !== null ||
-        timerId !== null ||
-        gameOver
-      );
+      return (activePlayer !== null || timerId !== null || gameOver);
     }
 
     function applyMinutesToClocksIfNotStarted() {
@@ -1913,9 +1773,7 @@
     });
 
     function clampShotSeconds(sec) {
-      const min = 10;
-      const max = 90;
-      return Math.max(min, Math.min(max, sec));
+      return Math.max(10, Math.min(90, sec));
     }
 
     function applyShotChange(player, delta) {
@@ -1930,9 +1788,7 @@
       if (!isGameStarted()) {
         shotTimeA = overtimeSecondsA;
         shotTimeB = overtimeSecondsB;
-        if (mode === 'shot') {
-          updateDisplays();
-        }
+        if (mode === 'shot') updateDisplays();
       }
     }
 
@@ -1942,9 +1798,7 @@
     shotMinusBEl.addEventListener('click', () => applyShotChange('B', -5));
 
     function clampExtensionSeconds(sec) {
-      const min = 5;
-      const max = 120;
-      return Math.max(min, Math.min(max, sec));
+      return Math.max(5, Math.min(120, sec));
     }
 
     function applyExtensionChange(player, delta) {
@@ -1971,10 +1825,7 @@
       if (extDisplayAEl) extDisplayAEl.textContent = extensionSecondsA.toString();
       if (extDisplayBEl) extDisplayBEl.textContent = extensionSecondsB.toString();
 
-      if (extensionEnabledToggle) {
-        extensionEnabledToggle.checked = extensionEnabled;
-      }
-
+      if (extensionEnabledToggle) extensionEnabledToggle.checked = extensionEnabled;
       if (modeStandardEl) modeStandardEl.checked = (mode === 'standard');
       if (modeShotOnlyEl) modeShotOnlyEl.checked = (mode === 'shot');
     }
@@ -2014,14 +1865,10 @@
 
     function applyModeFromUI() {
       const oldMode = mode;
-      if (modeStandardEl && modeStandardEl.checked) {
-        mode = 'standard';
-      } else if (modeShotOnlyEl && modeShotOnlyEl.checked) {
-        mode = 'shot';
-      }
-      if (mode !== oldMode) {
-        resetAll();
-      }
+      if (modeStandardEl && modeStandardEl.checked) mode = 'standard';
+      else if (modeShotOnlyEl && modeShotOnlyEl.checked) mode = 'shot';
+
+      if (mode !== oldMode) resetAll();
     }
 
     if (modeStandardEl) modeStandardEl.addEventListener('change', applyModeFromUI);
@@ -2071,6 +1918,10 @@
       const verEl = document.getElementById('appVersion');
       if (verEl) verEl.textContent = APP_VERSION;
 
+      // 念のため“交代”を強制セット（将来HTML編集で空になっても崩れない）
+      if (switchAreaAEl && !switchAreaAEl.textContent.trim()) switchAreaAEl.textContent = '交代';
+      if (switchAreaBEl && !switchAreaBEl.textContent.trim()) switchAreaBEl.textContent = '交代';
+
       updateMinutesDisplay();
       resetAll();
       updateOrientationUI();
@@ -2079,11 +1930,7 @@
       if (!isStandaloneMode()) {
         document.body.classList.add('browser-mode');
         setTimeout(() => {
-          try {
-            window.scrollTo(0, 1);
-          } catch (e) {
-            console.log('scrollTo error:', e);
-          }
+          try { window.scrollTo(0, 1); } catch (e) { console.log('scrollTo error:', e); }
         }, 400);
       }
     });
